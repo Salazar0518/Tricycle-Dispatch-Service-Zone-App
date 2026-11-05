@@ -1,3 +1,4 @@
+
 open class TODA(
     val name: String,
     val latitude: Double,
@@ -20,11 +21,13 @@ class BarangayTODA(
 class Driver(
     val name: String,
     val driverId: Int,
-    var available: Boolean
+    var available: Boolean,
+    val passengerCapacity: Int
 ) {
     fun showInfo() {
         println("Driver: $name")
         println("Driver ID: $driverId")
+        println("Passenger Capacity: $passengerCapacity")
 
         if (available) {
             println("Status: Available")
@@ -87,9 +90,9 @@ fun main() {
         BarangayTODA("Wawa", 14.0824, 120.6244)
     )
 
-    // Driver objects
-    val driver1 = Driver("Driver 1", 101, true)
-    val driver2 = Driver("Driver 2", 102, true)
+    // Driver objects with passenger capacities
+    val driver1 = Driver("Driver 1", 101, true, 3)
+    val driver2 = Driver("Driver 2", 102, true, 5)
 
     println("TRICYCLE DISPATCH & SERVICE ZONE APP")
     println()
@@ -101,40 +104,67 @@ fun main() {
         println("${index + 1}. Zone ${index + 1} - ${toda.name} TODA")
     }
 
+    // Pickup zone input with validation loop
+    var zone = 0
+
+    while (zone !in 1..todaList.size) {
+        println()
+        print("Enter pickup zone (1-${todaList.size}): ")
+
+        zone = readLine()?.toIntOrNull() ?: 0
+
+        if (zone !in 1..todaList.size) {
+            println("Invalid zone. Please enter a number from 1-${todaList.size}.")
+        }
+    }
+
+    val selectedTODA = todaList[zone - 1]
+
     println()
-    println("Enter pickup zone (1-${todaList.size}): ")
+    println("PICKUP ZONE INFORMATION")
+    selectedTODA.showInfo()
 
-    val zone = readLine()?.toIntOrNull()
+    // Passenger input with validation loop
+    var passengers = 0
 
-    if (zone != null && zone in 1..todaList.size) {
-
-        val selectedTODA = todaList[zone - 1]
-
+    while (passengers !in 1..5) {
         println()
-        println("PICKUP ZONE INFORMATION")
+        print("Enter number of passengers (1-5): ")
 
-        selectedTODA.showInfo()
+        val input = readLine()?.toIntOrNull()
 
-        println()
-        println("DRIVER ASSIGNMENT")
+        if (input != null && input in 1..5) {
+            passengers = input
+        } else {
+            println("Invalid input. Please enter between 1 and 5 passengers.")
+        }
+    }
 
-        when {
-            driver1.available -> {
-                driver1.acceptRide()
-                println("Assigned Driver: ${driver1.name}")
-            }
+    println()
+    println("DRIVER ASSIGNMENT")
 
-            driver2.available -> {
-                driver2.acceptRide()
-                println("Assigned Driver: ${driver2.name}")
-            }
-
-            else -> {
-                println("No drivers available.")
-            }
+    // Assign driver based on passenger capacity and availability
+    when {
+        driver1.available &&
+                passengers <= driver1.passengerCapacity -> {
+            driver1.acceptRide()
+            println("Assigned Driver: ${driver1.name}")
+            println("Driver ID: ${driver1.driverId}")
+            println("Passenger Capacity: ${driver1.passengerCapacity}")
+            println("Number of Passengers: $passengers")
         }
 
-    } else {
-        println("Invalid zone. Please choose from 1-${todaList.size}.")
+        driver2.available &&
+                passengers <= driver2.passengerCapacity -> {
+            driver2.acceptRide()
+            println("Assigned Driver: ${driver2.name}")
+            println("Driver ID: ${driver2.driverId}")
+            println("Passenger Capacity: ${driver2.passengerCapacity}")
+            println("Number of Passengers: $passengers")
+        }
+
+        else -> {
+            println("No available tricycle has enough passenger seats.")
+        }
     }
 }
