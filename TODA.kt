@@ -41,11 +41,10 @@ class Driver(
 
 fun main() {
 
-    // List of all 43 Barangay TODAs
+    // List of all 42 Barangay TODAs
     val todaList = listOf(
         BarangayTODA("Aga", 14.0900, 120.7792),
         BarangayTODA("Balaytigue", 14.1312, 120.6013),
-        BarangayTODA("Balok-balok", 14.0620, 120.6480),
         BarangayTODA("Banilad", 14.0411, 120.7391),
         BarangayTODA("Barangay 1 (Poblacion)", 14.0754, 120.6325),
         BarangayTODA("Barangay 2 (Poblacion)", 14.0735, 120.6310),
