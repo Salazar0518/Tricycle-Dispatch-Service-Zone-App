@@ -1,3 +1,22 @@
+open class TODA(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double
+) {
+    open fun showInfo() {
+        println("TODA Name: $name")
+        println("Latitude: $latitude")
+        println("Longitude: $longitude")
+    }
+}
+
+// Child class
+class BarangayTODA(
+    name: String,
+    latitude: Double,
+    longitude: Double
+) : TODA(name, latitude, longitude)
+
 class Driver(
     val name: String,
     val driverId: Int,
@@ -9,8 +28,7 @@ class Driver(
 
         if (available) {
             println("Status: Available")
-        }
-        else {
+        } else {
             println("Status: On Work")
         }
     }
@@ -22,76 +40,102 @@ class Driver(
 }
 
 fun main() {
-    val driver1 = Driver("driver 1", 101, true)
-    val driver2 = Driver("driver 2", 102, true)
 
-    println("Tricycle Dispatch & Service Zone App")
+    // List of all 43 Barangay TODAs
+    val todaList = listOf(
+        BarangayTODA("Aga", 14.0900, 120.7792),
+        BarangayTODA("Balaytigue", 14.1312, 120.6013),
+        BarangayTODA("Balok-balok", 14.0620, 120.6480),
+        BarangayTODA("Banilad", 14.0411, 120.7391),
+        BarangayTODA("Barangay 1 (Poblacion)", 14.0754, 120.6325),
+        BarangayTODA("Barangay 2 (Poblacion)", 14.0735, 120.6310),
+        BarangayTODA("Barangay 3 (Poblacion)", 14.0740, 120.6342),
+        BarangayTODA("Barangay 4 (Poblacion)", 14.0718, 120.6335),
+        BarangayTODA("Barangay 5 (Poblacion)", 14.0760, 120.6300),
+        BarangayTODA("Barangay 6 (Poblacion)", 14.0748, 120.6360),
+        BarangayTODA("Barangay 7 (Poblacion)", 14.0725, 120.6371),
+        BarangayTODA("Barangay 8 (Poblacion)", 14.0705, 120.6358),
+        BarangayTODA("Barangay 9 (Poblacion)", 14.0690, 120.6340),
+        BarangayTODA("Barangay 10 (Poblacion)", 14.0712, 120.6295),
+        BarangayTODA("Barangay 11 (Poblacion)", 14.0681, 120.6280),
+        BarangayTODA("Barangay 12 (Poblacion)", 14.0665, 120.6245),
+        BarangayTODA("Bilaran", 14.0617, 120.6656),
+        BarangayTODA("Bucana", 14.0864, 120.6272),
+        BarangayTODA("Bulihan", 14.1293, 120.6720),
+        BarangayTODA("Bunducan", 14.1030, 120.6690),
+        BarangayTODA("Butucan", 14.1295, 120.6310),
+        BarangayTODA("Calayo", 14.1461, 120.6141),
+        BarangayTODA("Catandaan", 14.0322, 120.6974),
+        BarangayTODA("Cogunan", 14.0531, 120.7512),
+        BarangayTODA("Dayap", 14.0970, 120.6980),
+        BarangayTODA("Kaylaway", 14.0610, 120.8250),
+        BarangayTODA("Kayrilaw", 14.1040, 120.7240),
+        BarangayTODA("Latag", 14.1160, 120.6120),
+        BarangayTODA("Looc", 14.1610, 120.6130),
+        BarangayTODA("Lumbangan", 14.0583, 120.7011),
+        BarangayTODA("Malapad na Bato", 14.1027, 120.6521),
+        BarangayTODA("Mataas na Pulo", 14.1070, 120.6400),
+        BarangayTODA("Maugat", 14.0870, 120.7250),
+        BarangayTODA("Munting Indan", 14.0910, 120.7100),
+        BarangayTODA("Natipuan", 14.1141, 120.5982),
+        BarangayTODA("Pantalan", 14.0833, 120.6417),
+        BarangayTODA("Papaya", 14.1950, 120.6080),
+        BarangayTODA("Putat", 14.0667, 120.6667),
+        BarangayTODA("Reparo", 14.0720, 120.6860),
+        BarangayTODA("Talangan", 14.0430, 120.6810),
+        BarangayTODA("Tumalim", 14.0520, 120.6550),
+        BarangayTODA("Utod", 14.1130, 120.6270),
+        BarangayTODA("Wawa", 14.0824, 120.6244)
+    )
+
+    // Driver objects
+    val driver1 = Driver("Driver 1", 101, true)
+    val driver2 = Driver("Driver 2", 102, true)
+
+    println("TRICYCLE DISPATCH & SERVICE ZONE APP")
     println()
-    println("Available Pickup Zones:\n" +
-            "1. Zone 1 - Barangay Aga TODA\n" +
-            "2. Zone 2 - Barangay Balaytigue TODA\n" +
-            "3. Zone 3 - Barangay Banilad TODA\n" +
-            "4. Zone 4 - Barangay 1 TODA\n" +
-            "5. Zone 5 - Barangay 2 TODA\n" +
-            "6. Zone 6 - Barangay 3 TODA\n" +
-            "7. Zone 7 - Barangay 4 TODA\n" +
-            "8. Zone 8 - Barangay 5 TODA\n" +
-            "9. Zone 9 - Barangay 6 TODA\n" +
-            "10. Zone 10 - Barangay 7 TODA\n" +
-            "11. Zone 11 - Barangay 8 TODA\n" +
-            "12. Zone 12 - Barangay 9 TODA\n" +
-            "13. Zone 13 - Barangay 10 TODA\n" +
-            "14. Zone 14 - Barangay 11 TODA\n" +
-            "15. Zone 15 - Barangay 12 TODA\n" +
-            "16. Zone 16 - Barangay Bilaran TODA\n" +
-            "17. Zone 17 - Barangay Bucana TODA\n" +
-            "18. Zone 18 - Barangay Bulihan TODA\n" +
-            "19. Zone 19 - Barangay Bunducan TODA\n" +
-            "20. Zone 20 - Barangay Butucan TODA\n" +
-            "21. Zone 21 - Barangay Calayo TODA\n" +
-            "22. Zone 22 - Barangay Catandaan TODA\n" +
-            "23. Zone 23 - Barangay Cogunan TODA\n" +
-            "24. Zone 24 - Barangay Dayap TODA\n" +
-            "25. Zone 25 - Barangay Kaylaway TODA\n" +
-            "26. Zone 26 - Barangay Kayrilaw TODA\n" +
-            "27. Zone 27 - Barangay Latag TODA\n" +
-            "28. Zone 28 - Barangay Looc TODA\n" +
-            "29. Zone 29 - Barangay Lumbangan TODA\n" +
-            "30. Zone 30 - Barangay Malapad Na Bato TODA\n" +
-            "31. Zone 31 - Barangay Mataas Na Pulo TODA\n" +
-            "32. Zone 32 - Barangay Maugat TODA\n" +
-            "33. Zone 33 - Barangay Munting Indan TODA\n" +
-            "34. Zone 34 - Barangay Natipuan TODA\n" +
-            "35. Zone 35 - Barangay Pantalan TODA\n" +
-            "36. Zone 36 - Barangay Papaya TODA\n" +
-            "37. Zone 37 - Barangay Putat TODA\n" +
-            "38. Zone 38 - Barangay Reparo TODA\n" +
-            "39. Zone 39 - Barangay Talangan TODA\n" +
-            "40. Zone 40 - Barangay Tumalim TODA\n" +
-            "41. Zone 41 - Barangay Utod TODA\n" +
-            "42. Zone 42 - Barangay Wawa TODA")
-    println()
-    println("Enter pickup zone (1-42): ")
-    val zone = readLine() ?.toIntOrNull()
 
-    if (zone in 1..42) {
-        println("Pickup Zone: Zone $zone")
+    // Display all available pickup zones
+    println("AVAILABLE PICKUP ZONES:")
 
-        println("Driver Assignment")
-
-        if (driver1.available) {
-            driver1.acceptRide()
-            println("Pickup Zone: Zone $zone")
-        }
-        else if (driver2.available) {
-            driver2.acceptRide()
-            println("Pickup Zone: Zone $zone")
-        }
-        else {
-            println("No drivers available.")
-        }
+    for ((index, toda) in todaList.withIndex()) {
+        println("${index + 1}. Zone ${index + 1} - ${toda.name} TODA")
     }
-    else {
-        println("Invalid zone. Please choose 1-5.")
+
+    println()
+    println("Enter pickup zone (1-${todaList.size}): ")
+
+    val zone = readLine()?.toIntOrNull()
+
+    if (zone != null && zone in 1..todaList.size) {
+
+        val selectedTODA = todaList[zone - 1]
+
+        println()
+        println("PICKUP ZONE INFORMATION")
+
+        selectedTODA.showInfo()
+
+        println()
+        println("DRIVER ASSIGNMENT")
+
+        when {
+            driver1.available -> {
+                driver1.acceptRide()
+                println("Assigned Driver: ${driver1.name}")
+            }
+
+            driver2.available -> {
+                driver2.acceptRide()
+                println("Assigned Driver: ${driver2.name}")
+            }
+
+            else -> {
+                println("No drivers available.")
+            }
+        }
+
+    } else {
+        println("Invalid zone. Please choose from 1-${todaList.size}.")
     }
 }
