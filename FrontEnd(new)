@@ -1,0 +1,1065 @@
+
+package com.example.tricycledispatchandzoneapp
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+// APP COLORS
+private val Navy = Color(0xFF102A43)
+private val Teal = Color(0xFF087E78)
+private val Amber = Color(0xFFF4A340)
+private val Background = Color(0xFFF4F7FA)
+private val White = Color.White
+private val Gray = Color(0xFF64748B)
+private val LightTeal = Color(0xFFE4F4F1)
+private val LightAmber = Color(0xFFFFF3DF)
+
+class MainActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            MaterialTheme(
+                colorScheme = lightColorScheme(
+                    primary = Teal,
+                    secondary = Amber,
+                    background = Background,
+                    surface = White
+                )
+            ) {
+                TricycleApp()
+            }
+        }
+    }
+}
+
+@Composable
+fun TricycleApp() {
+
+    // CONNECT TO BACKEND
+    val dispatchService = remember {
+        DispatchService()
+    }
+
+    val todaNames = remember {
+        dispatchService.getAllTODAs().map { it.name }
+    }
+
+    val totalDrivers = remember {
+        dispatchService.getAllTODAs().sumOf {
+            it.drivers.size
+        }
+    }
+
+    // APP STATES
+    var currentScreen by remember {
+        mutableStateOf("welcome")
+    }
+
+    var selectedTODA by remember {
+        mutableStateOf("")
+    }
+
+    var passengerCount by remember {
+        mutableIntStateOf(1)
+    }
+
+    var selectedRide by remember {
+        mutableStateOf<Ride?>(null)
+    }
+
+    var message by remember {
+        mutableStateOf("")
+    }
+
+    var searchText by remember {
+        mutableStateOf("")
+    }
+
+    var refreshKey by remember {
+        mutableIntStateOf(0)
+    }
+
+    // REFRESH BACKEND-CHANGED RIDE INFORMATION
+    val currentRefresh = refreshKey
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Background
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+
+            when (currentScreen) {
+
+                // =================================
+                // 1. WELCOME SCREEN
+                // =================================
+
+                "welcome" -> {
+
+                    Spacer(modifier = Modifier.height(45.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Navy,
+                                RoundedCornerShape(28.dp)
+                            )
+                            .padding(25.dp)
+                    ) {
+
+                        Column(
+                            verticalArrangement =
+                                Arrangement.spacedBy(18.dp)
+                        ) {
+
+                            Text(
+                                "NASUGBU • BATANGAS",
+                                color = Amber,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp
+                            )
+
+                            Text(
+                                "TRICYCLE\nDISPATCH",
+                                color = White,
+                                fontSize = 35.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                lineHeight = 42.sp
+                            )
+
+                            Text(
+                                "Your ride. Your barangay. Your destination.",
+                                color = Color.LightGray,
+                                fontSize = 15.sp
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Teal,
+                                        RoundedCornerShape(15.dp)
+                                    )
+                                    .padding(
+                                        horizontal = 16.dp,
+                                        vertical = 10.dp
+                                    )
+                            ) {
+                                Text(
+                                    "LOCAL TRANSPORT MADE EASY",
+                                    color = White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        "Welcome Aboard!",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Navy
+                    )
+
+                    Text(
+                        "Book a tricycle and find an available driver from your selected TODA zone.",
+                        color = Gray,
+                        fontSize = 15.sp,
+                        lineHeight = 23.sp
+                    )
+
+                    InfoCard(
+                        title = "42 Barangay Zones",
+                        description = "Choose from the available TODA zones in Nasugbu."
+                    )
+
+                    InfoCard(
+                        title = "Automatic Driver Assignment",
+                        description = "The system checks driver availability and passenger capacity."
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    PrimaryButton(
+                        text = "Get Started",
+                        onClick = {
+                            currentScreen = "home"
+                        }
+                    )
+                }
+
+                // =================================
+                // 2. HOME SCREEN
+                // =================================
+
+                "home" -> {
+
+                    AppHeader(
+                        subtitle = "YOUR LOCAL TRANSPORT PARTNER"
+                    )
+
+                    Text(
+                        "Hello, Passenger!",
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Navy
+                    )
+
+                    Text(
+                        "Where would you like to go?",
+                        color = Gray
+                    )
+
+                    // BOOKING CARD
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Navy
+                        )
+                    ) {
+
+                        Column(
+                            modifier = Modifier.padding(22.dp),
+                            verticalArrangement =
+                                Arrangement.spacedBy(15.dp)
+                        ) {
+
+                            Text(
+                                "BOOK A RIDE",
+                                color = Amber,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp
+                            )
+
+                            Text(
+                                "Your next ride\nstarts here.",
+                                color = White,
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                "Select your barangay TODA and let our dispatch system find an available driver.",
+                                color = Color.LightGray
+                            )
+
+                            Button(
+                                onClick = {
+                                    searchText = ""
+                                    currentScreen = "toda"
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Amber,
+                                    contentColor = Navy
+                                )
+                            ) {
+                                Text(
+                                    "Book a Tricycle  →",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        "SYSTEM OVERVIEW",
+                        color = Gray,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(12.dp)
+                    ) {
+
+                        StatCard(
+                            number = todaNames.size.toString(),
+                            label = "TODA Zones",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        StatCard(
+                            number = totalDrivers.toString(),
+                            label = "Registered Drivers",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    InfoCard(
+                        title = "Safe and Organized Dispatch",
+                        description = "Driver assignments are based on availability and passenger seating capacity."
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            currentScreen = "welcome"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Back")
+                    }
+                }
+
+                // =================================
+                // 3. TODA SELECTION
+                // =================================
+
+                "toda" -> {
+
+                    AppHeader(
+                        subtitle = "STEP 1 OF 3"
+                    )
+
+                    Text(
+                        "Choose Your Zone",
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Navy
+                    )
+
+                    Text(
+                        "Select the barangay where you want to book your tricycle.",
+                        color = Gray
+                    )
+
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = White
+                        )
+                    ) {
+
+                        Column(
+                            modifier = Modifier.padding(15.dp)
+                        ) {
+
+                            Text(
+                                "AVAILABLE ZONES",
+                                color = Teal,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                "${todaNames.size} registered TODA zones",
+                                color = Gray,
+                                fontSize = 13.sp
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(12.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = searchText,
+                                onValueChange = {
+                                    searchText = it
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = {
+                                    Text("Search barangay...")
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                        }
+                    }
+
+                    val filteredTODAs = todaNames.filter {
+                        it.contains(
+                            searchText,
+                            ignoreCase = true
+                        )
+                    }
+
+                    Column(
+                        verticalArrangement =
+                            Arrangement.spacedBy(9.dp)
+                    ) {
+
+                        filteredTODAs.forEach { todaName ->
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedTODA = todaName
+                                        message = ""
+                                        currentScreen = "passengers"
+                                    },
+                                shape = RoundedCornerShape(15.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = White
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 1.dp
+                                )
+                            ) {
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(17.dp),
+                                    verticalAlignment =
+                                        Alignment.CenterVertically
+                                ) {
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .background(
+                                                LightTeal,
+                                                RoundedCornerShape(12.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "T",
+                                            color = Teal,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 19.sp
+                                        )
+                                    }
+
+                                    Spacer(
+                                        modifier = Modifier.width(13.dp)
+                                    )
+
+                                    Text(
+                                        todaName,
+                                        modifier = Modifier.weight(1f),
+                                        color = Navy,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Text(
+                                        "›",
+                                        color = Teal,
+                                        fontSize = 25.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        if (filteredTODAs.isEmpty()) {
+                            Text(
+                                "No matching barangay found.",
+                                color = Gray
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            currentScreen = "home"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Back to Home")
+                    }
+                }
+
+                // =================================
+                // 4. PASSENGER COUNT
+                // =================================
+
+                "passengers" -> {
+
+                    AppHeader(
+                        subtitle = "STEP 2 OF 3"
+                    )
+
+                    Text(
+                        "Passenger Details",
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Navy
+                    )
+
+                    Text(
+                        "How many passengers will ride?",
+                        color = Gray
+                    )
+
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = White
+                        )
+                    ) {
+
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement =
+                                Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            Text(
+                                "SELECTED TODA",
+                                color = Gray,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                selectedTODA,
+                                color = Navy,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Text(
+                        "NUMBER OF PASSENGERS",
+                        color = Gray,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+
+                    for (number in 1..5) {
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    passengerCount = number
+                                },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor =
+                                    if (passengerCount == number) {
+                                        LightTeal
+                                    } else {
+                                        White
+                                    }
+                            )
+                        ) {
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(17.dp),
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
+
+                                Text(
+                                    "$number",
+                                    color = Teal,
+                                    fontSize = 23.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(
+                                    modifier = Modifier.width(15.dp)
+                                )
+
+                                Text(
+                                    if (number == 1) {
+                                        "Passenger"
+                                    } else {
+                                        "Passengers"
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    color = Navy,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                RadioButton(
+                                    selected = passengerCount == number,
+                                    onClick = {
+                                        passengerCount = number
+                                    },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = Teal
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(15.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = LightAmber
+                        )
+                    ) {
+                        Text(
+                            "The system will automatically check which driver has enough seats.",
+                            modifier = Modifier.padding(15.dp),
+                            color = Navy,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    PrimaryButton(
+                        text = "Find Available Driver",
+                        onClick = {
+
+                            val result = dispatchService.requestRide(
+                                selectedTODA,
+                                passengerCount
+                            )
+
+                            message = result.message
+
+                            if (result.successful &&
+                                result.ride != null
+                            ) {
+                                selectedRide = result.ride
+                                currentScreen = "assigned"
+                            }
+                        }
+                    )
+
+                    if (message.isNotEmpty()) {
+                        Text(
+                            message,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            currentScreen = "toda"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Change TODA")
+                    }
+                }
+
+                // =================================
+                // 5. DRIVER ASSIGNMENT
+                // =================================
+
+                "assigned" -> {
+
+                    val ride = selectedRide
+
+                    AppHeader(
+                        subtitle = "STEP 3 OF 3"
+                    )
+
+                    Text(
+                        "Ride Confirmed!",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Navy
+                    )
+
+                    Text(
+                        "Your driver has been successfully assigned.",
+                        color = Gray
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Teal
+                        )
+                    ) {
+
+                        Column(
+                            modifier = Modifier.padding(22.dp),
+                            verticalArrangement =
+                                Arrangement.spacedBy(12.dp)
+                        ) {
+
+                            Text(
+                                "ASSIGNMENT SUCCESSFUL",
+                                color = White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+
+                            Text(
+                                ride?.assignedDriver?.name ?: "Driver",
+                                color = White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                "Driver ID: ${ride?.assignedDriver?.driverId}",
+                                color = White
+                            )
+
+                            HorizontalDivider(
+                                color = Color.White.copy(alpha = 0.35f)
+                            )
+
+                            Text(
+                                "DRIVER STATUS: ON WORK",
+                                color = White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    if (ride != null) {
+
+                        InfoCard(
+                            title = "Ride Information",
+                            description =
+                                "Ride ID: ${ride.rideId}\n" +
+                                        "TODA: ${ride.pickupZone}\n" +
+                                        "Passengers: ${ride.passengerCount}\n" +
+                                        "Capacity: ${ride.assignedDriver.passengerCapacity}\n" +
+                                        "Status: ${ride.status}"
+                        )
+                    }
+
+                    PrimaryButton(
+                        text = "View Ride Status",
+                        onClick = {
+                            currentScreen = "status"
+                        }
+                    )
+                }
+
+                // =================================
+                // 6. RIDE STATUS
+                // =================================
+
+                "status" -> {
+
+                    val ride = selectedRide
+
+                    // OBSERVE CHANGES AFTER COMPLETING RIDE
+                    @Suppress("UNUSED_VARIABLE")
+                    val refresh = currentRefresh
+
+                    AppHeader(
+                        subtitle = "RIDE INFORMATION"
+                    )
+
+                    Text(
+                        "Your Ride",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Navy
+                    )
+
+                    if (ride != null) {
+
+                        val completed = ride.status == "COMPLETED"
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (completed) {
+                                    LightTeal
+                                } else {
+                                    LightAmber
+                                }
+                            )
+                        ) {
+
+                            Column(
+                                modifier = Modifier.padding(22.dp),
+                                verticalArrangement =
+                                    Arrangement.spacedBy(12.dp)
+                            ) {
+
+                                Text(
+                                    if (completed) {
+                                        "RIDE COMPLETED"
+                                    } else {
+                                        "RIDE IN PROGRESS"
+                                    },
+                                    color = Teal,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+
+                                Text(
+                                    if (completed) {
+                                        "Thank you for riding with us!"
+                                    } else {
+                                        "Your ride is currently ongoing."
+                                    },
+                                    color = Navy,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        InfoCard(
+                            title = "Ride Details",
+                            description =
+                                "Ride ID: ${ride.rideId}\n" +
+                                        "TODA: ${ride.pickupZone}\n" +
+                                        "Driver: ${ride.assignedDriver.name}\n" +
+                                        "Passengers: ${ride.passengerCount}\n" +
+                                        "Ride Status: ${ride.status}\n" +
+                                        "Driver Status: ${
+                                            if (ride.assignedDriver.available) {
+                                                "Available"
+                                            } else {
+                                                "On Work"
+                                            }
+                                        }"
+                        )
+
+                        if (!completed) {
+
+                            PrimaryButton(
+                                text = "Complete Ride",
+                                onClick = {
+
+                                    val result =
+                                        dispatchService.completeRide(
+                                            ride.rideId
+                                        )
+
+                                    message = result.message
+
+                                    // REFRESH DISPLAY
+                                    refreshKey++
+                                }
+                            )
+                        }
+
+                        if (message.isNotEmpty()) {
+                            Text(
+                                message,
+                                color = Teal,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+
+                            selectedTODA = ""
+                            passengerCount = 1
+                            selectedRide = null
+                            message = ""
+                            searchText = ""
+
+                            currentScreen = "home"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Back to Home")
+                    }
+                }
+            }
+
+            // FOOTER
+            Spacer(modifier = Modifier.height(15.dp))
+
+            HorizontalDivider(color = Color.LightGray)
+
+            Text(
+                "TRICYCLE DISPATCH • NASUGBU, BATANGAS",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                fontSize = 10.sp,
+                color = Gray,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(modifier = Modifier.height(15.dp))
+        }
+    }
+}
+
+// =================================
+// REUSABLE APP HEADER
+// =================================
+
+@Composable
+fun AppHeader(subtitle: String) {
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    Navy,
+                    RoundedCornerShape(15.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "TD",
+                color = Amber,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 19.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                "TRICYCLE DISPATCH",
+                color = Navy,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 15.sp
+            )
+
+            Text(
+                subtitle,
+                color = Gray,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp
+            )
+        }
+    }
+}
+
+// =================================
+// REUSABLE PRIMARY BUTTON
+// =================================
+
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit
+) {
+
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(55.dp),
+        shape = RoundedCornerShape(15.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Teal,
+            contentColor = White
+        )
+    ) {
+
+        Text(
+            text,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp
+        )
+    }
+}
+
+// =================================
+// REUSABLE INFORMATION CARD
+// =================================
+
+@Composable
+fun InfoCard(
+    title: String,
+    description: String
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+
+            Text(
+                title,
+                color = Navy,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+
+            Text(
+                description,
+                color = Gray,
+                fontSize = 13.sp,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+// =================================
+// REUSABLE STATISTICS CARD
+// =================================
+
+@Composable
+fun StatCard(
+    number: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = White
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.padding(17.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+
+            Text(
+                number,
+                color = Teal,
+                fontSize = 27.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Text(
+                label,
+                color = Gray,
+                fontSize = 12.sp
+            )
+        }
+    }
+}
