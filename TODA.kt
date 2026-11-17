@@ -1,85 +1,374 @@
-// DRIVER CLASS
-class Driver(
+package com.example.tricycledispatchandzoneapp
+
+// ==========================================
+// 1. ABSTRACT PERSON CLASS
+// ABSTRACTION
+// ==========================================
+
+abstract class Person(
     val name: String,
-    val driverId: Int,
+    val personId: Int
+) {
+
+    abstract val role: String
+
+    fun getPersonInformation(): String {
+        return "Name: $name | ID: $personId | Role: $role"
+    }
+}
+
+
+// ==========================================
+// 2. DRIVER CLASS
+// INHERITANCE AND POLYMORPHISM
+// ==========================================
+
+class Driver(
+    name: String,
+    val driverId: Int
+) : Person(name, driverId) {
+
+    override val role: String = "Driver"
+
+    fun displayDriverInformation(): String {
+        return getPersonInformation()
+    }
+}
+
+
+// ==========================================
+// 3. TRICYCLE CLASS
+// ENCAPSULATION
+// ==========================================
+
+class Tricycle(
+    val bodyNumber: String,
+    val driver: Driver,
     val passengerCapacity: Int
 ) {
-    var available: Boolean = true
-    var currentRideId: Int? = null
 
-    fun acceptRide(rideId: Int): Boolean {
-        if (available) {
-            available = false
+    var status: String = "AVAILABLE"
+        private set
+
+    var currentRideId: Int? = null
+        private set
+
+    // DISPATCH TRICYCLE
+
+    fun dispatch(rideId: Int): Boolean {
+
+        if (status == "WAITING") {
+
+            status = "ON TRIP"
             currentRideId = rideId
+
             return true
-        } else {
-            return false
         }
+
+        return false
     }
+
+    // COMPLETE RIDE
 
     fun completeRide(rideId: Int): Boolean {
-        if (currentRideId == rideId) {
-            available = true
+
+        if (currentRideId == rideId &&
+            status == "ON TRIP"
+        ) {
+
+            status = "AVAILABLE"
             currentRideId = null
+
             return true
-        } else {
+        }
+
+        return false
+    }
+
+    // SET WAITING STATUS
+
+    fun setWaiting(): Boolean {
+
+        if (status == "AVAILABLE") {
+
+            status = "WAITING"
+            return true
+        }
+
+        return false
+    }
+
+    // DISPLAY TRICYCLE INFORMATION
+
+    fun getInformation(): String {
+
+        return "Body Number: $bodyNumber | " +
+                "Driver: ${driver.name} | " +
+                "Capacity: $passengerCapacity | " +
+                "Status: $status"
+    }
+}
+
+
+// ==========================================
+// 4. SERVICE ZONE CLASS
+// FIFO QUEUE MANAGEMENT
+// ==========================================
+
+class ServiceZone(
+    val zoneCode: String,
+    val zoneName: String,
+    val description: String,
+    var baseFare: Double
+) {
+
+    // KOTLIN COLLECTION
+    // FIRST IN, FIRST OUT
+
+    private val tricycleQueue =
+        mutableListOf<Tricycle>()
+
+    // DRIVER TIME-IN
+
+    fun timeIn(tricycle: Tricycle): Boolean {
+
+        if (tricycle.passengerCapacity < 1) {
             return false
         }
+
+        if (tricycle.status != "AVAILABLE") {
+            return false
+        }
+
+        if (containsBodyNumber(tricycle.bodyNumber)) {
+            return false
+        }
+
+        val waiting = tricycle.setWaiting()
+
+        if (!waiting) {
+            return false
+        }
+
+        tricycleQueue.add(tricycle)
+
+        return true
+    }
+
+    // CHECK DUPLICATE BODY NUMBER
+
+    fun containsBodyNumber(bodyNumber: String): Boolean {
+
+        for (tricycle in tricycleQueue) {
+
+            if (tricycle.bodyNumber.equals(
+                    bodyNumber,
+                    ignoreCase = true
+                )
+            ) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    // GET NEXT TRICYCLE WITHOUT REMOVING
+
+    fun peekNext(): Tricycle? {
+
+        return tricycleQueue.firstOrNull()
+    }
+
+    // DISPATCH NEXT TRICYCLE
+    // FIFO: FIRST TRICYCLE IN, FIRST TRICYCLE OUT
+
+    fun dispatchNext(): Tricycle? {
+
+        if (tricycleQueue.isEmpty()) {
+            return null
+        }
+
+        return tricycleQueue.removeAt(0)
+    }
+
+    // GET ALL WAITING TRICYCLES
+
+    fun getQueue(): List<Tricycle> {
+
+        return tricycleQueue.toList()
+    }
+
+    // GET QUEUE SIZE
+
+    fun getQueueSize(): Int {
+
+        return tricycleQueue.size
     }
 }
 
 
-// PARENT CLASS
-open class TODA(
-    val name: String,
-    val latitude: Double,
-    val longitude: Double
+// ==========================================
+// 5. TODA TERMINAL CLASS
+// ==========================================
+
+class TodaTerminal(
+    val terminalName: String
 ) {
-    val drivers = mutableListOf<Driver>()
 
-    open fun getTODAName(): String {
-        return name
+    // ENCAPSULATION
+    // PRIVATE SERVICE ZONES
+
+    private val serviceZones =
+        mutableMapOf<String, ServiceZone>()
+
+    init {
+        initializeServiceZones()
+    }
+
+    // INITIALIZE THREE SERVICE ZONES
+
+    private fun initializeServiceZones() {
+
+        serviceZones["A"] = ServiceZone(
+            "A",
+            "Poblacion Core",
+            "Short distance routes",
+            15.00
+        )
+
+        serviceZones["B"] = ServiceZone(
+            "B",
+            "Highway / Subdivision",
+            "Medium distance routes",
+            0.00
+        )
+
+        serviceZones["C"] = ServiceZone(
+            "C",
+            "Bukid / Upland Area",
+            "Long distance and rough road routes",
+            40.00
+        )
+    }
+
+    // GET ONE SERVICE ZONE
+
+    fun getZone(zoneCode: String): ServiceZone? {
+
+        return serviceZones[zoneCode.uppercase()]
+    }
+
+    // GET ALL SERVICE ZONES
+
+    fun getAllZones(): List<ServiceZone> {
+
+        return serviceZones.values.toList()
+    }
+
+    // GET QUEUE OF A SELECTED ZONE
+
+    fun getZoneQueue(zoneCode: String): List<Tricycle> {
+
+        val zone = getZone(zoneCode)
+
+        if (zone != null) {
+            return zone.getQueue()
+        }
+
+        return emptyList()
     }
 }
 
 
-// CHILD CLASS
-class BarangayTODA(
-    name: String,
-    latitude: Double,
-    longitude: Double
-) : TODA(name, latitude, longitude)
+// ==========================================
+// 6. BARANGAY CLASS
+// COMPOSITION
+// ==========================================
+
+class Barangay(
+    val barangayName: String
+) {
+
+    // A BARANGAY HAS ITS OWN TODA TERMINAL
+
+    val terminal = TodaTerminal(
+        "$barangayName TODA Terminal"
+    )
+}
 
 
-// RIDE CLASS
+// ==========================================
+// 7. RIDE CLASS
+// ==========================================
+
 class Ride(
     val rideId: Int,
-    val pickupZone: String,
-    val latitude: Double,
-    val longitude: Double,
+    val barangayName: String,
+    val zoneCode: String,
+    val zoneName: String,
     val passengerCount: Int,
-    val assignedDriver: Driver
+    val assignedTricycle: Tricycle,
+    val fare: Double,
+    val cashReceived: Double
 ) {
+
     var status: String = "ONGOING"
+        private set
+
+    val change: Double
+        get() = cashReceived - fare
+
+    // PHYSICAL TICKET INFORMATION
+
+    fun generateTicket(): String {
+
+        return """
+            ==========================
+                 TODA DISPATCH TICKET
+            ==========================
+            Ride ID: $rideId
+            Barangay: $barangayName
+            Terminal: ${barangayName} TODA
+            Tricycle: #${assignedTricycle.bodyNumber}
+            Driver: ${assignedTricycle.driver.name}
+            Zone: $zoneCode - $zoneName
+            Passengers: $passengerCount
+            Fare: PHP $fare
+            Payment: PAID
+            Cash Received: PHP $cashReceived
+            Change: PHP $change
+            Status: $status
+            ==========================
+        """.trimIndent()
+    }
+
+    // COMPLETE RIDE
 
     fun complete(): Boolean {
+
         if (status == "ONGOING") {
-            val completed = assignedDriver.completeRide(rideId)
+
+            val completed =
+                assignedTricycle.completeRide(rideId)
 
             if (completed) {
+
                 status = "COMPLETED"
+
                 return true
-            } else {
-                return false
             }
-        } else {
-            return false
         }
+
+        return false
     }
 }
 
 
-// DISPATCH RESULT CLASS
+// ==========================================
+// 8. DISPATCH RESULT CLASS
+// ==========================================
+
 class DispatchResult(
     val successful: Boolean,
     val message: String,
@@ -87,213 +376,440 @@ class DispatchResult(
 )
 
 
-// BACKEND SERVICE CLASS
-class DispatchService {
+// ==========================================
+// 9. NASUGBU CENTRAL SYSTEM
+// MAIN BACKEND CLASS
+// ==========================================
 
-    private val todaList = mutableListOf<TODA>()
-    private val rideList = mutableListOf<Ride>()
+class NasugbuCentralSystem {
+
+    // MAIN BARANGAY DATABASE
+
+    private val barangayMap =
+        mutableMapOf<String, Barangay>()
+
+    // PRESERVE BARANGAY ORDER
+
+    private val barangayList =
+        mutableListOf<Barangay>()
+
+    // TRICYCLE REGISTRY
+
+    private val tricycleRegistry =
+        mutableMapOf<String, Tricycle>()
+
+    // AUTOMATED RIDE LOGBOOK
+
+    private val rideLogbook =
+        mutableListOf<Ride>()
 
     private var nextRideId = 1
 
     init {
-        initializeTODAs()
-        initializeDrivers()
+        initializeBarangays()
     }
 
 
-    // INITIALIZE ALL BARANGAY TODAs
-    private fun initializeTODAs() {
+    // ======================================
+    // INITIALIZE ALL 42 BARANGAYS
+    // ======================================
 
-        todaList.addAll(
-            listOf(
-                BarangayTODA("Aga", 14.0900, 120.7792),
-                BarangayTODA("Balaytigue", 14.1312, 120.6013),
-                BarangayTODA("Banilad", 14.0411, 120.7391),
-                BarangayTODA("Barangay 1 (Poblacion)", 14.0754, 120.6325),
-                BarangayTODA("Barangay 2 (Poblacion)", 14.0735, 120.6310),
-                BarangayTODA("Barangay 3 (Poblacion)", 14.0740, 120.6342),
-                BarangayTODA("Barangay 4 (Poblacion)", 14.0718, 120.6335),
-                BarangayTODA("Barangay 5 (Poblacion)", 14.0760, 120.6300),
-                BarangayTODA("Barangay 6 (Poblacion)", 14.0748, 120.6360),
-                BarangayTODA("Barangay 7 (Poblacion)", 14.0725, 120.6371),
-                BarangayTODA("Barangay 8 (Poblacion)", 14.0705, 120.6358),
-                BarangayTODA("Barangay 9 (Poblacion)", 14.0690, 120.6340),
-                BarangayTODA("Barangay 10 (Poblacion)", 14.0712, 120.6295),
-                BarangayTODA("Barangay 11 (Poblacion)", 14.0681, 120.6280),
-                BarangayTODA("Barangay 12 (Poblacion)", 14.0665, 120.6245),
-                BarangayTODA("Bilaran", 14.0617, 120.6656),
-                BarangayTODA("Bucana", 14.0864, 120.6272),
-                BarangayTODA("Bulihan", 14.1293, 120.6720),
-                BarangayTODA("Bunducan", 14.1030, 120.6690),
-                BarangayTODA("Butucan", 14.1295, 120.6310),
-                BarangayTODA("Calayo", 14.1461, 120.6141),
-                BarangayTODA("Catandaan", 14.0322, 120.6974),
-                BarangayTODA("Cogunan", 14.0531, 120.7512),
-                BarangayTODA("Dayap", 14.0970, 120.6980),
-                BarangayTODA("Kaylaway", 14.0610, 120.8250),
-                BarangayTODA("Kayrilaw", 14.1040, 120.7240),
-                BarangayTODA("Latag", 14.1160, 120.6120),
-                BarangayTODA("Looc", 14.1610, 120.6130),
-                BarangayTODA("Lumbangan", 14.0583, 120.7011),
-                BarangayTODA("Malapad na Bato", 14.1027, 120.6521),
-                BarangayTODA("Mataas na Pulo", 14.1070, 120.6400),
-                BarangayTODA("Maugat", 14.0870, 120.7250),
-                BarangayTODA("Munting Indan", 14.0910, 120.7100),
-                BarangayTODA("Natipuan", 14.1141, 120.5982),
-                BarangayTODA("Pantalan", 14.0833, 120.6417),
-                BarangayTODA("Papaya", 14.1950, 120.6080),
-                BarangayTODA("Putat", 14.0667, 120.6667),
-                BarangayTODA("Reparo", 14.0720, 120.6860),
-                BarangayTODA("Talangan", 14.0430, 120.6810),
-                BarangayTODA("Tumalim", 14.0520, 120.6550),
-                BarangayTODA("Utod", 14.1130, 120.6270),
-                BarangayTODA("Wawa", 14.0824, 120.6244)
-            )
+    private fun initializeBarangays() {
+
+        val names = listOf(
+            "Aga",
+            "Balaytigue",
+            "Banilad",
+            "Barangay 1 (Poblacion)",
+            "Barangay 2 (Poblacion)",
+            "Barangay 3 (Poblacion)",
+            "Barangay 4 (Poblacion)",
+            "Barangay 5 (Poblacion)",
+            "Barangay 6 (Poblacion)",
+            "Barangay 7 (Poblacion)",
+            "Barangay 8 (Poblacion)",
+            "Barangay 9 (Poblacion)",
+            "Barangay 10 (Poblacion)",
+            "Barangay 11 (Poblacion)",
+            "Barangay 12 (Poblacion)",
+            "Bilaran",
+            "Bucana",
+            "Bulihan",
+            "Bunducan",
+            "Butucan",
+            "Calayo",
+            "Catandaan",
+            "Cogunan",
+            "Dayap",
+            "Kaylaway",
+            "Kayrilaw",
+            "Latag",
+            "Looc",
+            "Lumbangan",
+            "Malapad na Bato",
+            "Mataas na Pulo",
+            "Maugat",
+            "Munting Indan",
+            "Natipuan",
+            "Pantalan",
+            "Papaya",
+            "Putat",
+            "Reparo",
+            "Talangan",
+            "Tumalim",
+            "Utod",
+            "Wawa"
         )
-    }
 
+        for (name in names) {
 
-    // GIVE EVERY TODA ITS OWN TWO DRIVERS
-    private fun initializeDrivers() {
+            val barangay = Barangay(name)
 
-        var driverId = 1
+            barangayMap[name.lowercase()] = barangay
 
-        for (toda in todaList) {
-
-            toda.drivers.add(
-                Driver("${toda.name} Driver 1", driverId, 3)
-            )
-
-            driverId++
-
-            toda.drivers.add(
-                Driver("${toda.name} Driver 2", driverId, 5)
-            )
-
-            driverId++
+            barangayList.add(barangay)
         }
     }
 
 
-    // GET ALL TODA ZONES
-    fun getAllTODAs(): List<TODA> {
-        return todaList
+    // ======================================
+    // BARANGAY OPERATIONS
+    // ======================================
+
+    fun getAllBarangays(): List<Barangay> {
+
+        return barangayList.toList()
+    }
+
+    fun getBarangay(name: String): Barangay? {
+
+        return barangayMap[name.trim().lowercase()]
+    }
+
+    fun getTotalBarangays(): Int {
+
+        return barangayMap.size
     }
 
 
-    // GET ONE TODA
-    fun getTODA(name: String): TODA? {
+    // ======================================
+    // SET SERVICE ZONE FARE
+    // ======================================
 
-        for (toda in todaList) {
-            if (toda.name.equals(name, ignoreCase = true)) {
-                return toda
-            }
+    fun setZoneFare(
+        barangayName: String,
+        zoneCode: String,
+        newFare: Double
+    ): Boolean {
+
+        if (newFare <= 0) {
+            return false
         }
 
-        return null
+        val barangay = getBarangay(barangayName)
+            ?: return false
+
+        val zone = barangay.terminal.getZone(zoneCode)
+            ?: return false
+
+        zone.baseFare = newFare
+
+        return true
     }
 
 
-    // GET DRIVERS OF A SELECTED TODA
-    fun getDrivers(todaName: String): List<Driver> {
+    // ======================================
+    // DRIVER TIME-IN
+    // ======================================
 
-        val selectedTODA = getTODA(todaName)
-
-        if (selectedTODA != null) {
-            return selectedTODA.drivers
-        } else {
-            return emptyList()
-        }
-    }
-
-
-    // BOOK A RIDE AND ASSIGN A DRIVER
-    fun requestRide(
-        todaName: String,
-        passengerCount: Int
+    fun timeInTricycle(
+        barangayName: String,
+        zoneCode: String,
+        bodyNumber: String,
+        driverName: String,
+        driverId: Int,
+        passengerCapacity: Int
     ): DispatchResult {
 
-        if (passengerCount < 1 || passengerCount > 5) {
+        val barangay = getBarangay(barangayName)
+
+        if (barangay == null) {
+
             return DispatchResult(
                 false,
-                "Passenger count must be between 1 and 5."
+                "Barangay not found."
             )
         }
 
-        val selectedTODA = getTODA(todaName)
+        val zone = barangay.terminal.getZone(zoneCode)
 
-        if (selectedTODA == null) {
+        if (zone == null) {
+
             return DispatchResult(
                 false,
-                "TODA zone not found."
+                "Service zone not found."
             )
         }
 
-        var selectedDriver: Driver? = null
+        if (bodyNumber.isBlank() || driverName.isBlank()) {
 
-        for (driver in selectedTODA.drivers) {
-
-            if (driver.available &&
-                passengerCount <= driver.passengerCapacity) {
-
-                selectedDriver = driver
-                break
-            }
-        }
-
-        if (selectedDriver == null) {
             return DispatchResult(
                 false,
-                "No available driver has enough passenger seats in ${selectedTODA.name} TODA."
+                "Body number and driver name are required."
             )
         }
 
-        val newRide = Ride(
-            nextRideId,
-            selectedTODA.name,
-            selectedTODA.latitude,
-            selectedTODA.longitude,
-            passengerCount,
-            selectedDriver
+        if (driverId <= 0) {
+
+            return DispatchResult(
+                false,
+                "Invalid driver ID."
+            )
+        }
+
+        if (passengerCapacity < 1 ||
+            passengerCapacity > 5
+        ) {
+
+            return DispatchResult(
+                false,
+                "Passenger capacity must be between 1 and 5."
+            )
+        }
+
+        val cleanBodyNumber = bodyNumber.trim()
+
+        val bodyKey = cleanBodyNumber.lowercase()
+
+        val existingTricycle =
+            tricycleRegistry[bodyKey]
+
+        if (existingTricycle != null &&
+            existingTricycle.status != "AVAILABLE"
+        ) {
+
+            return DispatchResult(
+                false,
+                "This tricycle is already waiting or on a trip."
+            )
+        }
+
+        // CREATE DRIVER OBJECT
+
+        val driver = Driver(
+            driverName.trim(),
+            driverId
         )
 
-        val accepted = selectedDriver.acceptRide(nextRideId)
+        // CREATE TRICYCLE OBJECT
 
-        if (accepted) {
+        val tricycle = Tricycle(
+            cleanBodyNumber,
+            driver,
+            passengerCapacity
+        )
 
-            rideList.add(newRide)
-            nextRideId++
+        // ADD TRICYCLE TO QUEUE
+
+        val added = zone.timeIn(tricycle)
+
+        if (added) {
+
+            tricycleRegistry[bodyKey] = tricycle
 
             return DispatchResult(
                 true,
-                "Ride successfully assigned to ${selectedDriver.name}.",
-                newRide
-            )
-
-        } else {
-
-            return DispatchResult(
-                false,
-                "Driver is no longer available."
+                "Tricycle #${tricycle.bodyNumber} successfully added to Zone $zoneCode queue."
             )
         }
+
+        return DispatchResult(
+            false,
+            "Unable to add tricycle to the queue."
+        )
     }
 
 
-    // COMPLETE A RIDE
+    // ======================================
+    // GET QUEUE
+    // ======================================
+
+    fun getZoneQueue(
+        barangayName: String,
+        zoneCode: String
+    ): List<Tricycle> {
+
+        val barangay = getBarangay(barangayName)
+            ?: return emptyList()
+
+        return barangay.terminal.getZoneQueue(zoneCode)
+    }
+
+
+    // ======================================
+    // PASSENGER PAYMENT AND DISPATCH
+    // ======================================
+
+    fun dispatchNext(
+        barangayName: String,
+        zoneCode: String,
+        passengerCount: Int,
+        cashReceived: Double
+    ): DispatchResult {
+
+        val barangay = getBarangay(barangayName)
+
+        if (barangay == null) {
+
+            return DispatchResult(
+                false,
+                "Barangay not found."
+            )
+        }
+
+        val zone = barangay.terminal.getZone(zoneCode)
+
+        if (zone == null) {
+
+            return DispatchResult(
+                false,
+                "Service zone not found."
+            )
+        }
+
+        if (passengerCount < 1) {
+
+            return DispatchResult(
+                false,
+                "Passenger count must be at least 1."
+            )
+        }
+
+        if (zone.baseFare <= 0) {
+
+            return DispatchResult(
+                false,
+                "Please configure the base fare for Zone $zoneCode first."
+            )
+        }
+
+        // CHECK FIRST TRICYCLE
+
+        val nextTricycle = zone.peekNext()
+
+        if (nextTricycle == null) {
+
+            return DispatchResult(
+                false,
+                "No available tricycle in Zone $zoneCode."
+            )
+        }
+
+        // CHECK PASSENGER CAPACITY
+
+        if (passengerCount >
+            nextTricycle.passengerCapacity
+        ) {
+
+            return DispatchResult(
+                false,
+                "The next tricycle can only accommodate ${nextTricycle.passengerCapacity} passengers. Please adjust the passenger count."
+            )
+        }
+
+        // CHECK CASH PAYMENT
+
+        if (cashReceived < zone.baseFare) {
+
+            return DispatchResult(
+                false,
+                "Insufficient payment. Required fare: PHP ${zone.baseFare}."
+            )
+        }
+
+        // CHECK IF TRICYCLE CAN BE DISPATCHED
+
+        val newRideId = nextRideId
+
+        if (nextTricycle.status != "WAITING") {
+
+            return DispatchResult(
+                false,
+                "Tricycle is not waiting in the queue."
+            )
+        }
+
+        // REMOVE FIRST TRICYCLE FROM QUEUE
+
+        val selectedTricycle = zone.dispatchNext()
+
+        if (selectedTricycle == null) {
+
+            return DispatchResult(
+                false,
+                "Unable to dispatch tricycle."
+            )
+        }
+
+        // CHANGE STATUS TO ON TRIP
+
+        val dispatched =
+            selectedTricycle.dispatch(newRideId)
+
+        if (!dispatched) {
+
+            return DispatchResult(
+                false,
+                "Tricycle dispatch failed."
+            )
+        }
+
+        // CREATE RIDE OBJECT
+
+        val newRide = Ride(
+            newRideId,
+            barangay.barangayName,
+            zone.zoneCode,
+            zone.zoneName,
+            passengerCount,
+            selectedTricycle,
+            zone.baseFare,
+            cashReceived
+        )
+
+        // SAVE TO LOGBOOK
+
+        rideLogbook.add(newRide)
+
+        nextRideId++
+
+        return DispatchResult(
+            true,
+            "Tricycle #${selectedTricycle.bodyNumber} successfully dispatched. Payment received.",
+            newRide
+        )
+    }
+
+
+    // ======================================
+    // COMPLETE RIDE
+    // ======================================
+
     fun completeRide(rideId: Int): DispatchResult {
 
         var selectedRide: Ride? = null
 
-        for (ride in rideList) {
+        for (ride in rideLogbook) {
 
             if (ride.rideId == rideId) {
+
                 selectedRide = ride
                 break
             }
         }
 
         if (selectedRide == null) {
+
             return DispatchResult(
                 false,
                 "Ride not found."
@@ -306,96 +822,198 @@ class DispatchService {
 
             return DispatchResult(
                 true,
-                "Ride $rideId completed. ${selectedRide.assignedDriver.name} is now available.",
+                "Ride completed. Tricycle #${selectedRide.assignedTricycle.bodyNumber} is now available.",
                 selectedRide
             )
-
-        } else {
-
-            return DispatchResult(
-                false,
-                "This ride is already completed or could not be completed."
-            )
         }
+
+        return DispatchResult(
+            false,
+            "Ride is already completed or cannot be completed."
+        )
     }
 
 
-    // GET ALL RIDES
+    // ======================================
+    // AUTOMATED LOGBOOK OPERATIONS
+    // ======================================
+
     fun getAllRides(): List<Ride> {
-        return rideList
+
+        return rideLogbook.toList()
     }
 
-
-    // GET ONGOING RIDES
     fun getOngoingRides(): List<Ride> {
 
-        val ongoingRides = mutableListOf<Ride>()
+        val result = mutableListOf<Ride>()
 
-        for (ride in rideList) {
+        for (ride in rideLogbook) {
 
             if (ride.status == "ONGOING") {
-                ongoingRides.add(ride)
+
+                result.add(ride)
             }
         }
 
-        return ongoingRides
+        return result
     }
 
-
-    // GET COMPLETED RIDES
     fun getCompletedRides(): List<Ride> {
 
-        val completedRides = mutableListOf<Ride>()
+        val result = mutableListOf<Ride>()
 
-        for (ride in rideList) {
+        for (ride in rideLogbook) {
 
             if (ride.status == "COMPLETED") {
-                completedRides.add(ride)
+
+                result.add(ride)
             }
         }
 
-        return completedRides
+        return result
+    }
+
+    fun getTotalTrips(): Int {
+
+        return rideLogbook.size
+    }
+
+    fun getTotalCollections(): Double {
+
+        var total = 0.0
+
+        for (ride in rideLogbook) {
+
+            total += ride.fare
+        }
+
+        return total
     }
 }
 
 
-// MAIN FUNCTION - FOR TESTING THE BACKEND
+// ==========================================
+// 10. MAIN FUNCTION
+// BACKEND TESTING
+// ==========================================
+
 fun main() {
 
-    val dispatchService = DispatchService()
+    val system = NasugbuCentralSystem()
 
-    // CHECK THE NUMBER OF TODA ZONES
-    println("Total TODA Zones: ${dispatchService.getAllTODAs().size}")
+    println("================================")
+    println(" NASUGBU CENTRAL DISPATCH SYSTEM")
+    println("================================")
 
+    // CHECK BARANGAYS
 
-    // CHECK THE DRIVERS IN WAWA
-    val drivers = dispatchService.getDrivers("Wawa")
+    println(
+        "\nTotal Barangays: ${system.getTotalBarangays()}"
+    )
 
-    println("\nWawa Drivers:")
+    // POLYMORPHISM TEST
+    // PERSON REFERENCE, DRIVER OBJECT
 
-    for (driver in drivers) {
-        println("Name: ${driver.name}")
-        println("Driver ID: ${driver.driverId}")
-        println("Passenger Capacity: ${driver.passengerCapacity}")
-        println("Available: ${driver.available}")
+    val person: Person = Driver(
+        "Sample Driver",
+        100
+    )
+
+    println("\n--- PERSON INFORMATION ---")
+    println(person.getPersonInformation())
+
+    // CONFIGURE ZONE B FARE FOR TESTING
+
+    system.setZoneFare(
+        "Wawa",
+        "B",
+        25.00
+    )
+
+    // DRIVER TIME-IN
+
+    println("\n--- DRIVER TIME-IN ---")
+
+    val timeIn1 = system.timeInTricycle(
+        "Wawa",
+        "C",
+        "055",
+        "Driver One",
+        101,
+        3
+    )
+
+    println(timeIn1.message)
+
+    val timeIn2 = system.timeInTricycle(
+        "Wawa",
+        "C",
+        "056",
+        "Driver Two",
+        102,
+        5
+    )
+
+    println(timeIn2.message)
+
+    // CHECK QUEUE
+
+    println("\n--- ZONE C QUEUE ---")
+
+    for (tricycle in system.getZoneQueue("Wawa", "C")) {
+
+        println(tricycle.getInformation())
     }
 
+    // PASSENGER PAYMENT AND DISPATCH
 
-    // TEST RIDE REQUEST
-    val result = dispatchService.requestRide("Wawa", 2)
+    println("\n--- DISPATCH NEXT ---")
 
-    println("\nRide Request:")
+    val result = system.dispatchNext(
+        "Wawa",
+        "C",
+        2,
+        50.00
+    )
+
     println(result.message)
 
-
-    // TEST RIDE COMPLETION
     if (result.successful) {
 
-        val rideId = result.ride!!.rideId
+        val ride = result.ride
 
-        val completion = dispatchService.completeRide(rideId)
+        if (ride != null) {
 
-        println("\nRide Completion:")
-        println(completion.message)
+            println("\n" + ride.generateTicket())
+
+            // COMPLETE RIDE
+
+            println("\n--- COMPLETE RIDE ---")
+
+            val completion =
+                system.completeRide(ride.rideId)
+
+            println(completion.message)
+        }
     }
+
+    // LOGBOOK SUMMARY
+
+    println("\n--- LOGBOOK SUMMARY ---")
+
+    println(
+        "Total Trips: ${system.getTotalTrips()}"
+    )
+
+    println(
+        "Ongoing Trips: ${system.getOngoingRides().size}"
+    )
+
+    println(
+        "Completed Trips: ${system.getCompletedRides().size}"
+    )
+
+    println(
+        "Total Collections: PHP ${system.getTotalCollections()}"
+    )
 }
