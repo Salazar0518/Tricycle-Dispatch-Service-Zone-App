@@ -1,21 +1,27 @@
-
 package com.example.tricycledispatchandzoneapp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +45,7 @@ private val LightNavy = Color(0xFFE9EFF5)
 // ==========================================
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -65,17 +72,23 @@ class MainActivity : ComponentActivity() {
 fun AdminApp() {
 
     val centralSystem = remember { NasugbuCentralSystem() }
+    val authentication = remember { AdminAuthentication() }
 
-    var currentScreen by remember { mutableStateOf("barangaySelection") }
+    // LOGIN STATE
+    var currentScreen by remember { mutableStateOf("login") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var isLoggedIn by remember { mutableStateOf(false) }
+
     var selectedBarangay by remember { mutableStateOf("") }
     var barangayDropdownExpanded by remember { mutableStateOf(false) }
     var selectedZone by remember { mutableStateOf("A") }
     var selectedRide by remember { mutableStateOf<Ride?>(null) }
 
-    // The confirmation dialog is initially hidden.
     var showLogbookRefreshDialog by remember { mutableStateOf(false) }
 
-    // Form inputs
+    // FORM INPUTS
     var bodyNumber by remember { mutableStateOf("") }
     var driverName by remember { mutableStateOf("") }
     var driverId by remember { mutableStateOf("") }
@@ -84,14 +97,13 @@ fun AdminApp() {
     var cashReceived by remember { mutableStateOf("") }
     var fareInput by remember { mutableStateOf("") }
 
-    // Messages
+    // MESSAGES
     var message by remember { mutableStateOf("") }
     var messageSuccess by remember { mutableStateOf(false) }
 
-    // Refresh counter
-    var refreshKey by remember { mutableStateOf(0) }
+    var refreshKey by remember { mutableIntStateOf(0) }
 
-    // Read backend information
+    // BACKEND INFORMATION
     val barangays = centralSystem.getAllBarangays()
 
     var totalWaiting = 0
@@ -111,6 +123,7 @@ fun AdminApp() {
         modifier = Modifier.fillMaxSize(),
         color = Background
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -120,503 +133,912 @@ fun AdminApp() {
         ) {
 
             // ==========================================
-            // LOGBOOK REFRESH CONFIRMATION DIALOG
+            // 1. ADMIN LOGIN SCREEN
+            // EMBLEM LOGO DISPLAYED AT THE TOP
             // ==========================================
 
-            if (currentScreen == "logbook" && showLogbookRefreshDialog) {
+            if (currentScreen == "login") {
 
-                AlertDialog(
-                    onDismissRequest = {
-                        showLogbookRefreshDialog = false
-                    },
-                    title = {
-                        Text("Refresh Logbook?")
-                    },
-                    text = {
-                        Text(
-                            "Are you sure you want to refresh the Ride Logbook for $selectedBarangay?"
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                refreshKey++
+                Spacer(modifier = Modifier.height(45.dp))
 
-                                message = "Logbook refreshed successfully."
-                                messageSuccess = true
+                // OFFICIAL EMBLEM LOGO (res/drawable/tricycle_logo.png)
 
-                                showLogbookRefreshDialog = false
-                            }
-                        ) {
-                            Text("Yes, Refresh")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = {
-                                showLogbookRefreshDialog = false
-                            }
-                        ) {
-                            Text("Cancel")
-                        }
-                    },
-                    containerColor = White,
-                    titleContentColor = Navy,
-                    textContentColor = Gray
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.tricycle_logo
+                    ),
+                    contentDescription = "Tricycle Dispatch Logo",
+                    modifier = Modifier
+                        .size(190.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Fit
                 )
-            }
 
-            when (currentScreen) {
+                Text(
+                    "Admin Login",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = Navy,
+                    fontSize = 29.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-                // =================================
-                // 1. INITIAL BARANGAY SELECTION
-                // =================================
+                Text(
+                    "Welcome to the Tricycle Dispatch and Service Zone Management System. Please enter your administrator credentials.",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = Gray,
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp
+                )
 
-                "barangaySelection" -> {
+                Spacer(modifier = Modifier.height(10.dp))
 
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    AppHeader(subtitle = "TERMINAL ACCESS")
-
-                    Text(
-                        "Select Barangay Terminal",
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp
                     )
+                ) {
 
-                    Text(
-                        "Choose the barangay where you are currently assigned. All terminal operations will use this selection.",
-                        color = Gray,
-                        lineHeight = 22.sp
-                    )
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = White)
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(15.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-
-                            Text(
-                                "BARANGAY TERMINAL",
-                                color = Teal,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-
-                            Box(modifier = Modifier.fillMaxWidth()) {
-
-                                OutlinedTextField(
-                                    value = selectedBarangay,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    label = { Text("Choose barangay") },
-                                    placeholder = {
-                                        Text("Select from registered barangays")
-                                    },
-                                    trailingIcon = {
-                                        Text(
-                                            if (barangayDropdownExpanded) "▲" else "▼",
-                                            color = Teal
-                                        )
-                                    },
-                                    singleLine = true
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .clickable {
-                                            barangayDropdownExpanded = true
-                                        }
-                                )
-
-                                DropdownMenu(
-                                    expanded = barangayDropdownExpanded,
-                                    onDismissRequest = {
-                                        barangayDropdownExpanded = false
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.88f)
-                                        .heightIn(max = 320.dp)
-                                        .background(White)
-                                ) {
-                                    for (barangay in barangays) {
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(barangay.barangayName)
-                                            },
-                                            onClick = {
-                                                selectedBarangay =
-                                                    barangay.barangayName
-
-                                                barangayDropdownExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Text(
-                                "Registered terminals: ${barangays.size}",
-                                color = Gray,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    PrimaryButton(
-                        text = "Continue to Admin Dashboard",
-                        onClick = {
-                            if (selectedBarangay.isNotBlank()) {
-                                currentScreen = "dashboard"
-                                message = ""
-                            } else {
-                                message =
-                                    "Please select a barangay before continuing."
-                                messageSuccess = false
-                            }
-                        }
-                    )
-
-                    if (message.isNotEmpty()) {
-                        MessageCard(message, messageSuccess)
-                    }
-                }
-
-                // =================================
-                // 2. ADMIN DASHBOARD
-                // =================================
-
-                "dashboard" -> {
-
-                    AppHeader(subtitle = "ADMIN CONTROL PANEL")
-
-                    Text(
-                        "Dashboard",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text("Welcome back, Administrator.", color = Gray)
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(17.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = LightTeal
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                "CURRENTLY MANAGING",
-                                color = Teal,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                letterSpacing = 1.sp
-                            )
-
-                            Text(
-                                selectedBarangay,
-                                color = Navy,
-                                fontSize = 21.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Text(
-                                "$selectedBarangay TODA Terminal",
-                                color = Gray,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            selectedBarangay = ""
-                            currentScreen = "barangaySelection"
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Change Barangay Terminal")
-                    }
-
-                    Text(
-                        "SYSTEM OVERVIEW",
-                        color = Gray,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    )
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        StatCard(
-                            number = centralSystem.getTotalBarangays().toString(),
-                            label = "Barangays",
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        StatCard(
-                            number = totalWaiting.toString(),
-                            label = "Waiting Tricycles",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        StatCard(
-                            number = ongoingTrips.toString(),
-                            label = "Ongoing Trips",
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        StatCard(
-                            number = completedTrips.toString(),
-                            label = "Completed Trips",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    InfoCard(
-                        title = "Total Dispatches",
-                        description = "$totalTrips recorded trips"
-                    )
-
-                    InfoCard(
-                        title = "Total Collections",
-                        description = "PHP ${"%.2f".format(totalCollections)}"
-                    )
-
-                    Text(
-                        "ADMIN OPERATIONS",
-                        color = Gray,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    )
-
-                    MenuCard(
-                        title = "Terminal Operations",
-                        description = "Manage service zones and fares, register drivers, and monitor the tricycle queue for $selectedBarangay.",
-                        iconText = "01",
-                        onClick = {
-                            currentScreen = "terminal"
-                        }
-                    )
-
-                    MenuCard(
-                        title = "Passenger Dispatch",
-                        description = "Record passenger details, receive cash payment, and dispatch the next tricycle.",
-                        iconText = "02",
-                        onClick = {
-                            currentScreen = "dispatch"
-                        }
-                    )
-
-                    MenuCard(
-                        title = "Ride Logbook",
-                        description = "View and update ongoing and completed trip records.",
-                        iconText = "03",
-                        onClick = {
-                            currentScreen = "logbook"
-
-                            // Do not show the dialog when opening Logbook.
-                            showLogbookRefreshDialog = false
-
-                            message = ""
-                        }
-                    )
-                }
-
-                // =================================
-                // 3. TERMINAL DASHBOARD
-                // =================================
-
-                "terminal" -> {
-
-                    val barangay = centralSystem.getBarangay(selectedBarangay)
-
-                    AppHeader(subtitle = "TERMINAL OPERATIONS")
-
-                    Text(
-                        selectedBarangay,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text("Barangay TODA Terminal", color = Gray)
-
-                    Text(
-                        "Manage service zones, driver time-in, and waiting tricycle queues from this page.",
-                        color = Gray,
-                        lineHeight = 21.sp
-                    )
-
-                    InfoCard(
-                        title = "Terminal Information",
-                        description = "Barangay: $selectedBarangay\nTerminal: $selectedBarangay TODA Terminal\nService Zones: 3"
-                    )
-
-                    Text(
-                        "SERVICE ZONES",
-                        color = Gray,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    )
-
-                    if (barangay != null) {
-
-                        val zones = barangay.terminal
-                            .getAllZones()
-                            .sortedBy { it.zoneCode }
-
-                        for (zone in zones) {
-
-                            val fareText = if (zone.baseFare > 0) {
-                                "PHP ${"%.2f".format(zone.baseFare)}"
-                            } else {
-                                "Not configured"
-                            }
-
-                            MenuCard(
-                                title = "Zone ${zone.zoneCode} - ${zone.zoneName}",
-                                description = "${zone.description}\nBase Fare: $fareText\nWaiting Tricycles: ${zone.getQueueSize()}",
-                                iconText = zone.zoneCode,
-                                onClick = {
-                                    selectedZone = zone.zoneCode
-
-                                    fareInput = if (zone.baseFare > 0) {
-                                        zone.baseFare.toString()
-                                    } else {
-                                        ""
-                                    }
-
-                                    message = ""
-                                    currentScreen = "zone"
-                                }
-                            )
-                        }
-
-                    } else {
-                        InfoCard(
-                            title = "Terminal Not Found",
-                            description = "The selected barangay terminal could not be loaded."
-                        )
-                    }
-
-                    PrimaryButton(
-                        text = "Register Driver / Tricycle (Time-In)",
-                        onClick = {
-                            currentScreen = "timein"
-                        }
-                    )
-
-                    PrimaryButton(
-                        text = "Manage Tricycle Queue",
-                        onClick = {
-                            currentScreen = "queue"
-                        }
-                    )
-
-                    BackButton {
-                        currentScreen = "dashboard"
-                    }
-                }
-
-                // =================================
-                // 4. SERVICE ZONE DETAILS
-                // =================================
-
-                "zone" -> {
-
-                    val zone = centralSystem
-                        .getBarangay(selectedBarangay)
-                        ?.terminal
-                        ?.getZone(selectedZone)
-
-                    AppHeader(subtitle = "SERVICE ZONE INFORMATION")
-
-                    Text(
-                        "Zone $selectedZone",
-                        fontSize = 29.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text(zone?.zoneName ?: "Unknown Zone", color = Gray)
-
-                    if (zone != null) {
-
-                        InfoCard(
-                            title = "Zone Description",
-                            description = zone.description
-                        )
-
-                        StatCard(
-                            number = zone.getQueueSize().toString(),
-                            label = "Waiting Tricycles"
-                        )
-
-                        InfoCard(
-                            title = "Current Base Fare",
-                            description = "PHP ${"%.2f".format(zone.baseFare)}"
-                        )
 
                         Text(
-                            "CONFIGURE ZONE FARE",
-                            color = Gray,
-                            fontWeight = FontWeight.Bold
+                            "ADMINISTRATOR ACCOUNT",
+                            color = Teal,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            letterSpacing = 1.sp
                         )
+
+                        // USERNAME
 
                         OutlinedTextField(
-                            value = fareInput,
+                            value = username,
                             onValueChange = {
-                                fareInput = it
-                            },
-                            label = {
-                                Text("New Base Fare (PHP)")
+                                username = it
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            label = {
+                                Text("Username")
+                            },
+                            placeholder = {
+                                Text("Enter admin username")
+                            },
+                            singleLine = true,
+                            enabled = !isLoggedIn
                         )
 
+                        // PASSWORD
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                password = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = {
+                                Text("Password")
+                            },
+                            placeholder = {
+                                Text("Enter admin password")
+                            },
+                            singleLine = true,
+                            visualTransformation = if (showPassword) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
+                            trailingIcon = {
+                                TextButton(
+                                    onClick = {
+                                        showPassword = !showPassword
+                                    }
+                                ) {
+                                    Text(
+                                        if (showPassword) "HIDE" else "SHOW",
+                                        color = Teal,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        )
+
+                        // LOGIN BUTTON
+
                         PrimaryButton(
-                            text = "Save Zone Fare",
+                            text = "Login as Administrator",
                             onClick = {
 
-                                val fare = fareInput.toDoubleOrNull()
+                                if (username.isBlank() || password.isBlank()) {
 
-                                if (fare == null || fare <= 0) {
-
-                                    message = "Enter a valid fare."
+                                    message = "Please enter your username and password."
                                     messageSuccess = false
 
                                 } else {
 
-                                    val saved = centralSystem.setZoneFare(
-                                        selectedBarangay,
-                                        selectedZone,
-                                        fare
+                                    val loginSuccessful =
+                                        authentication.authenticate(
+                                            username,
+                                            password
+                                        )
+
+                                    if (loginSuccessful) {
+
+                                        isLoggedIn = true
+                                        currentScreen = "barangaySelection"
+
+                                        username = ""
+                                        password = ""
+
+                                        message = ""
+                                        messageSuccess = true
+
+                                    } else {
+
+                                        message = "Incorrect username or password. Please try again."
+                                        messageSuccess = false
+                                    }
+                                }
+                            }
+                        )
+
+                        if (message.isNotEmpty()) {
+                            MessageCard(message, messageSuccess)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                Text(
+                    "AUTHORIZED ADMINISTRATORS ONLY",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = Gray,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            // ==========================================
+            // ADMIN FEATURES
+            // ONLY ACCESSIBLE AFTER LOGIN
+            // ==========================================
+
+            if (isLoggedIn) {
+
+                // ==========================================
+                // LOGBOOK REFRESH CONFIRMATION
+                // ==========================================
+
+                if (currentScreen == "logbook" &&
+                    showLogbookRefreshDialog
+                ) {
+
+                    AlertDialog(
+                        onDismissRequest = {
+                            showLogbookRefreshDialog = false
+                        },
+                        title = {
+                            Text("Refresh Logbook?")
+                        },
+                        text = {
+                            Text(
+                                "Are you sure you want to refresh the Ride Logbook for $selectedBarangay?"
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+
+                                    refreshKey++
+
+                                    message = "Logbook refreshed successfully."
+                                    messageSuccess = true
+
+                                    showLogbookRefreshDialog = false
+                                }
+                            ) {
+                                Text("Yes, Refresh")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = {
+                                    showLogbookRefreshDialog = false
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+                        },
+                        containerColor = White,
+                        titleContentColor = Navy,
+                        textContentColor = Gray
+                    )
+                }
+
+                when (currentScreen) {
+
+                    // =================================
+                    // 2. BARANGAY SELECTION
+                    // =================================
+
+                    "barangaySelection" -> {
+
+                        Spacer(modifier = Modifier.height(28.dp))
+
+                        AppHeader(subtitle = "TERMINAL ACCESS")
+
+                        Text(
+                            "Select Barangay Terminal",
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text(
+                            "Choose the barangay where you are currently assigned. All terminal operations will use this selection.",
+                            color = Gray,
+                            lineHeight = 22.sp
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = White
+                            )
+                        ) {
+
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+
+                                Text(
+                                    "BARANGAY TERMINAL",
+                                    color = Teal,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+
+                                Box(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+
+                                    OutlinedTextField(
+                                        value = selectedBarangay,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = {
+                                            Text("Choose barangay")
+                                        },
+                                        placeholder = {
+                                            Text("Select from registered barangays")
+                                        },
+                                        trailingIcon = {
+                                            Text(
+                                                if (barangayDropdownExpanded) "▲" else "▼",
+                                                color = Teal
+                                            )
+                                        },
+                                        singleLine = true
                                     )
 
-                                    messageSuccess = saved
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .clickable {
+                                                barangayDropdownExpanded = true
+                                            }
+                                    )
 
-                                    message = if (saved) {
-                                        "Zone fare successfully updated."
+                                    DropdownMenu(
+                                        expanded = barangayDropdownExpanded,
+                                        onDismissRequest = {
+                                            barangayDropdownExpanded = false
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.88f)
+                                            .heightIn(max = 320.dp)
+                                            .background(White)
+                                    ) {
+
+                                        for (barangay in barangays) {
+
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(barangay.barangayName)
+                                                },
+                                                onClick = {
+
+                                                    selectedBarangay =
+                                                        barangay.barangayName
+
+                                                    barangayDropdownExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    "Registered terminals: ${barangays.size}",
+                                    color = Gray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        PrimaryButton(
+                            text = "Continue to Admin Dashboard",
+                            onClick = {
+
+                                if (selectedBarangay.isNotBlank()) {
+
+                                    currentScreen = "dashboard"
+                                    message = ""
+
+                                } else {
+
+                                    message = "Please select a barangay before continuing."
+                                    messageSuccess = false
+                                }
+                            }
+                        )
+
+                        if (message.isNotEmpty()) {
+                            MessageCard(message, messageSuccess)
+                        }
+                    }
+
+                    // =================================
+                    // 3. ADMIN DASHBOARD
+                    // =================================
+
+                    "dashboard" -> {
+
+                        AppHeader(subtitle = "ADMIN CONTROL PANEL")
+
+                        Text(
+                            "Dashboard",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text(
+                            "Welcome back, Administrator.",
+                            color = Gray
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(17.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = LightTeal
+                            )
+                        ) {
+
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+
+                                Text(
+                                    "CURRENTLY MANAGING",
+                                    color = Teal,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    letterSpacing = 1.sp
+                                )
+
+                                Text(
+                                    selectedBarangay,
+                                    color = Navy,
+                                    fontSize = 21.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    "$selectedBarangay TODA Terminal",
+                                    color = Gray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                selectedBarangay = ""
+                                currentScreen = "barangaySelection"
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Change Barangay Terminal")
+                        }
+
+                        Text(
+                            "SYSTEM OVERVIEW",
+                            color = Gray,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+
+                            StatCard(
+                                number = centralSystem.getTotalBarangays().toString(),
+                                label = "Barangays",
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            StatCard(
+                                number = totalWaiting.toString(),
+                                label = "Waiting Tricycles",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+
+                            StatCard(
+                                number = ongoingTrips.toString(),
+                                label = "Ongoing Trips",
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            StatCard(
+                                number = completedTrips.toString(),
+                                label = "Completed Trips",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        InfoCard(
+                            title = "Total Dispatches",
+                            description = "$totalTrips recorded trips"
+                        )
+
+                        InfoCard(
+                            title = "Total Collections",
+                            description = "PHP ${"%.2f".format(totalCollections)}"
+                        )
+
+                        Text(
+                            "ADMIN OPERATIONS",
+                            color = Gray,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        )
+
+                        MenuCard(
+                            title = "Terminal Operations",
+                            description = "Manage service zones and fares, register drivers, and monitor the tricycle queue for $selectedBarangay.",
+                            iconText = "01",
+                            onClick = {
+                                currentScreen = "terminal"
+                            }
+                        )
+
+                        MenuCard(
+                            title = "Passenger Dispatch",
+                            description = "Record passenger details, receive cash payment, and dispatch the next tricycle.",
+                            iconText = "02",
+                            onClick = {
+                                currentScreen = "dispatch"
+                            }
+                        )
+
+                        MenuCard(
+                            title = "Ride Logbook",
+                            description = "View and update ongoing and completed trip records.",
+                            iconText = "03",
+                            onClick = {
+                                currentScreen = "logbook"
+                                showLogbookRefreshDialog = false
+                                message = ""
+                            }
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+
+                                isLoggedIn = false
+
+                                selectedBarangay = ""
+                                selectedZone = "A"
+                                selectedRide = null
+
+                                username = ""
+                                password = ""
+
+                                message = ""
+                                showLogbookRefreshDialog = false
+
+                                currentScreen = "login"
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.Red
+                            )
+                        ) {
+                            Text("Logout Admin")
+                        }
+                    }
+
+                    // =================================
+                    // 4. TERMINAL DASHBOARD
+                    // =================================
+
+                    "terminal" -> {
+
+                        val barangay =
+                            centralSystem.getBarangay(selectedBarangay)
+
+                        AppHeader(subtitle = "TERMINAL OPERATIONS")
+
+                        Text(
+                            selectedBarangay,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text("Barangay TODA Terminal", color = Gray)
+
+                        Text(
+                            "Manage service zones, driver time-in, and waiting tricycle queues from this page.",
+                            color = Gray,
+                            lineHeight = 21.sp
+                        )
+
+                        InfoCard(
+                            title = "Terminal Information",
+                            description = "Barangay: $selectedBarangay\nTerminal: $selectedBarangay TODA Terminal\nService Zones: 3"
+                        )
+
+                        Text(
+                            "SERVICE ZONES",
+                            color = Gray,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        )
+
+                        if (barangay != null) {
+
+                            val zones = barangay.terminal
+                                .getAllZones()
+                                .sortedBy { it.zoneCode }
+
+                            for (zone in zones) {
+
+                                val fareText = if (zone.baseFare > 0) {
+                                    "PHP ${"%.2f".format(zone.baseFare)}"
+                                } else {
+                                    "Not configured"
+                                }
+
+                                MenuCard(
+                                    title = "Zone ${zone.zoneCode} - ${zone.zoneName}",
+                                    description = "${zone.description}\nBase Fare: $fareText\nWaiting Tricycles: ${zone.getQueueSize()}",
+                                    iconText = zone.zoneCode,
+                                    onClick = {
+
+                                        selectedZone = zone.zoneCode
+
+                                        fareInput = if (zone.baseFare > 0) {
+                                            zone.baseFare.toString()
+                                        } else {
+                                            ""
+                                        }
+
+                                        message = ""
+                                        currentScreen = "zone"
+                                    }
+                                )
+                            }
+
+                        } else {
+
+                            InfoCard(
+                                title = "Terminal Not Found",
+                                description = "The selected barangay terminal could not be loaded."
+                            )
+                        }
+
+                        PrimaryButton(
+                            text = "Register Driver / Tricycle (Time-In)",
+                            onClick = {
+                                currentScreen = "timein"
+                            }
+                        )
+
+                        PrimaryButton(
+                            text = "Manage Tricycle Queue",
+                            onClick = {
+                                currentScreen = "queue"
+                            }
+                        )
+
+                        BackButton {
+                            currentScreen = "dashboard"
+                        }
+                    }
+
+                    // =================================
+                    // 5. SERVICE ZONE DETAILS
+                    // =================================
+
+                    "zone" -> {
+
+                        val zone = centralSystem
+                            .getBarangay(selectedBarangay)
+                            ?.terminal
+                            ?.getZone(selectedZone)
+
+                        AppHeader(subtitle = "SERVICE ZONE INFORMATION")
+
+                        Text(
+                            "Zone $selectedZone",
+                            fontSize = 29.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text(zone?.zoneName ?: "Unknown Zone", color = Gray)
+
+                        if (zone != null) {
+
+                            InfoCard(
+                                title = "Zone Description",
+                                description = zone.description
+                            )
+
+                            StatCard(
+                                number = zone.getQueueSize().toString(),
+                                label = "Waiting Tricycles"
+                            )
+
+                            InfoCard(
+                                title = "Current Base Fare",
+                                description = "PHP ${"%.2f".format(zone.baseFare)}"
+                            )
+
+                            Text(
+                                "CONFIGURE ZONE FARE",
+                                color = Gray,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            OutlinedTextField(
+                                value = fareInput,
+                                onValueChange = {
+                                    fareInput = it
+                                },
+                                label = {
+                                    Text("New Base Fare (PHP)")
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            PrimaryButton(
+                                text = "Save Zone Fare",
+                                onClick = {
+
+                                    val fare = fareInput.toDoubleOrNull()
+
+                                    if (fare == null || fare <= 0) {
+
+                                        message = "Enter a valid fare."
+                                        messageSuccess = false
+
                                     } else {
-                                        "Unable to update zone fare."
+
+                                        val saved = centralSystem.setZoneFare(
+                                            selectedBarangay,
+                                            selectedZone,
+                                            fare
+                                        )
+
+                                        messageSuccess = saved
+
+                                        message = if (saved) {
+                                            "Zone fare successfully updated."
+                                        } else {
+                                            "Unable to update zone fare."
+                                        }
+
+                                        refreshKey++
+                                    }
+                                }
+                            )
+
+                            if (message.isNotEmpty()) {
+                                MessageCard(message, messageSuccess)
+                            }
+
+                        } else {
+
+                            InfoCard(
+                                title = "Zone Not Found",
+                                description = "This service zone is not available."
+                            )
+                        }
+
+                        BackButton {
+                            currentScreen = "terminal"
+                        }
+                    }
+
+                    // =================================
+                    // 6. DRIVER TIME-IN
+                    // =================================
+
+                    "timein" -> {
+
+                        AppHeader(subtitle = "DRIVER REGISTRATION")
+
+                        Text(
+                            "Driver Time-In",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text(
+                            "Enter the driver's information and assign the tricycle to its service zone.",
+                            color = Gray,
+                            lineHeight = 22.sp
+                        )
+
+                        InfoCard(
+                            title = "Selected Barangay Terminal",
+                            description = "$selectedBarangay TODA Terminal"
+                        )
+
+                        FormLabel("SERVICE ZONE")
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            for (code in listOf("A", "B", "C")) {
+
+                                Button(
+                                    onClick = {
+                                        selectedZone = code
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (selectedZone == code) Teal else LightNavy,
+                                        contentColor = if (selectedZone == code) White else Navy
+                                    )
+                                ) {
+                                    Text("Zone $code")
+                                }
+                            }
+                        }
+
+                        FormLabel("TRICYCLE BODY NUMBER")
+
+                        OutlinedTextField(
+                            value = bodyNumber,
+                            onValueChange = {
+                                bodyNumber = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text("Example: 055")
+                            },
+                            singleLine = true
+                        )
+
+                        FormLabel("DRIVER NAME")
+
+                        OutlinedTextField(
+                            value = driverName,
+                            onValueChange = {
+                                driverName = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text("Enter driver name")
+                            },
+                            singleLine = true
+                        )
+
+                        FormLabel("DRIVER ID")
+
+                        OutlinedTextField(
+                            value = driverId,
+                            onValueChange = {
+                                driverId = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text("Enter driver ID")
+                            },
+                            singleLine = true
+                        )
+
+                        FormLabel("PASSENGER CAPACITY")
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+
+                            for (capacity in 1..5) {
+
+                                Button(
+                                    onClick = {
+                                        passengerCapacity = capacity.toString()
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(5.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (passengerCapacity == capacity.toString()) Teal else LightNavy,
+                                        contentColor = if (passengerCapacity == capacity.toString()) White else Navy
+                                    )
+                                ) {
+                                    Text(capacity.toString())
+                                }
+                            }
+                        }
+
+                        PrimaryButton(
+                            text = "Confirm Driver Time-In",
+                            onClick = {
+
+                                val id = driverId.toIntOrNull()
+                                val capacity = passengerCapacity.toIntOrNull()
+
+                                if (
+                                    id == null ||
+                                    driverName.isBlank() ||
+                                    bodyNumber.isBlank() ||
+                                    selectedBarangay.isBlank() ||
+                                    capacity == null
+                                ) {
+
+                                    message = "Please complete all required fields."
+                                    messageSuccess = false
+
+                                } else {
+
+                                    val result = centralSystem.timeInTricycle(
+                                        selectedBarangay,
+                                        selectedZone,
+                                        bodyNumber,
+                                        driverName,
+                                        id,
+                                        capacity
+                                    )
+
+                                    message = result.message
+                                    messageSuccess = result.successful
+
+                                    if (result.successful) {
+                                        bodyNumber = ""
+                                        driverName = ""
+                                        driverId = ""
+                                        passengerCapacity = "3"
                                     }
 
                                     refreshKey++
@@ -628,865 +1050,700 @@ fun AdminApp() {
                             MessageCard(message, messageSuccess)
                         }
 
-                    } else {
-
-                        InfoCard(
-                            title = "Zone Not Found",
-                            description = "This service zone is not available."
-                        )
-                    }
-
-                    BackButton {
-                        currentScreen = "terminal"
-                    }
-                }
-
-                // =================================
-                // 5. DRIVER TIME-IN
-                // =================================
-
-                "timein" -> {
-
-                    AppHeader(subtitle = "DRIVER REGISTRATION")
-
-                    Text(
-                        "Driver Time-In",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text(
-                        "Enter the driver's information and assign the tricycle to its service zone.",
-                        color = Gray,
-                        lineHeight = 22.sp
-                    )
-
-                    InfoCard(
-                        title = "Selected Barangay Terminal",
-                        description = "$selectedBarangay TODA Terminal"
-                    )
-
-                    FormLabel("SERVICE ZONE")
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (code in listOf("A", "B", "C")) {
-
-                            Button(
-                                onClick = {
-                                    selectedZone = code
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selectedZone == code) Teal else LightNavy,
-                                    contentColor = if (selectedZone == code) White else Navy
-                                )
-                            ) {
-                                Text("Zone $code")
-                            }
+                        BackButton {
+                            currentScreen = "terminal"
                         }
                     }
 
-                    FormLabel("TRICYCLE BODY NUMBER")
+                    // =================================
+                    // 7. FIFO QUEUE MANAGEMENT
+                    // =================================
 
-                    OutlinedTextField(
-                        value = bodyNumber,
-                        onValueChange = {
-                            bodyNumber = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text("Example: 055")
-                        },
-                        singleLine = true
-                    )
+                    "queue" -> {
 
-                    FormLabel("DRIVER NAME")
+                        AppHeader(subtitle = "FIFO QUEUE MANAGEMENT")
 
-                    OutlinedTextField(
-                        value = driverName,
-                        onValueChange = {
-                            driverName = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text("Enter driver name")
-                        },
-                        singleLine = true
-                    )
-
-                    FormLabel("DRIVER ID")
-
-                    OutlinedTextField(
-                        value = driverId,
-                        onValueChange = {
-                            driverId = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text("Enter driver ID")
-                        },
-                        singleLine = true
-                    )
-
-                    FormLabel("PASSENGER CAPACITY")
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        for (capacity in 1..5) {
-
-                            Button(
-                                onClick = {
-                                    passengerCapacity = capacity.toString()
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(5.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (passengerCapacity == capacity.toString()) Teal else LightNavy,
-                                    contentColor = if (passengerCapacity == capacity.toString()) White else Navy
-                                )
-                            ) {
-                                Text(capacity.toString())
-                            }
-                        }
-                    }
-
-                    PrimaryButton(
-                        text = "Confirm Driver Time-In",
-                        onClick = {
-
-                            val id = driverId.toIntOrNull()
-                            val capacity = passengerCapacity.toIntOrNull()
-
-                            if (
-                                id == null ||
-                                driverName.isBlank() ||
-                                bodyNumber.isBlank() ||
-                                selectedBarangay.isBlank() ||
-                                capacity == null
-                            ) {
-
-                                message = "Please complete all required fields."
-                                messageSuccess = false
-
-                            } else {
-
-                                val result = centralSystem.timeInTricycle(
-                                    selectedBarangay,
-                                    selectedZone,
-                                    bodyNumber,
-                                    driverName,
-                                    id,
-                                    capacity
-                                )
-
-                                message = result.message
-                                messageSuccess = result.successful
-
-                                if (result.successful) {
-                                    bodyNumber = ""
-                                    driverName = ""
-                                    driverId = ""
-                                    passengerCapacity = "3"
-                                }
-
-                                refreshKey++
-                            }
-                        }
-                    )
-
-                    if (message.isNotEmpty()) {
-                        MessageCard(message, messageSuccess)
-                    }
-
-                    BackButton {
-                        currentScreen = "terminal"
-                    }
-                }
-
-                // =================================
-                // 6. FIFO QUEUE MANAGEMENT
-                // =================================
-
-                "queue" -> {
-
-                    AppHeader(subtitle = "FIFO QUEUE MANAGEMENT")
-
-                    Text(
-                        "Tricycle Queue",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text(
-                        "Monitor the waiting tricycles in each service zone.",
-                        color = Gray
-                    )
-
-                    InfoCard(
-                        title = "Selected Barangay",
-                        description = "$selectedBarangay TODA Terminal"
-                    )
-
-                    val barangay = centralSystem.getBarangay(selectedBarangay)
-
-                    if (barangay != null) {
-
-                        val zones = barangay.terminal
-                            .getAllZones()
-                            .sortedBy { it.zoneCode }
-
-                        for (zone in zones) {
-
-                            Text(
-                                "ZONE ${zone.zoneCode} - ${zone.zoneName}",
-                                color = Teal,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            val queue = zone.getQueue()
-
-                            if (queue.isEmpty()) {
-
-                                InfoCard(
-                                    title = "No Waiting Tricycles",
-                                    description = "There are currently no tricycles in this zone."
-                                )
-
-                            } else {
-
-                                for ((index, tricycle) in queue.withIndex()) {
-
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(15.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = White
-                                        )
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(15.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(42.dp)
-                                                    .background(
-                                                        if (index == 0) LightAmber else LightTeal,
-                                                        RoundedCornerShape(12.dp)
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    "${index + 1}",
-                                                    color = Navy,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.width(12.dp))
-
-                                            Column(
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text(
-                                                    "Tricycle #${tricycle.bodyNumber}",
-                                                    color = Navy,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-
-                                                Text(
-                                                    tricycle.driver.name,
-                                                    color = Gray,
-                                                    fontSize = 12.sp
-                                                )
-
-                                                Text(
-                                                    "Capacity: ${tricycle.passengerCapacity}",
-                                                    color = Gray,
-                                                    fontSize = 12.sp
-                                                )
-                                            }
-
-                                            if (index == 0) {
-                                                StatusBadge("NEXT")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                    } else {
-
-                        InfoCard(
-                            title = "Terminal Not Found",
-                            description = "Return to Barangay Selection and choose a registered terminal."
-                        )
-                    }
-
-                    PrimaryButton(
-                        text = "Refresh Queue",
-                        onClick = {
-                            refreshKey++
-                            message = "Queue information refreshed."
-                            messageSuccess = true
-                        }
-                    )
-
-                    if (message.isNotEmpty()) {
-                        MessageCard(message, messageSuccess)
-                    }
-
-                    BackButton {
-                        currentScreen = "terminal"
-                    }
-                }
-
-                // =================================
-                // 7. PASSENGER PAYMENT & DISPATCH
-                // =================================
-
-                "dispatch" -> {
-
-                    AppHeader(subtitle = "PASSENGER DISPATCH")
-
-                    Text(
-                        "Dispatch Next Tricycle",
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text(
-                        "Enter the passenger's details and collect the cash payment before dispatching.",
-                        color = Gray,
-                        lineHeight = 22.sp
-                    )
-
-                    InfoCard(
-                        title = "Selected Barangay Terminal",
-                        description = "$selectedBarangay TODA Terminal"
-                    )
-
-                    FormLabel("DESTINATION / SERVICE ZONE")
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (code in listOf("A", "B", "C")) {
-
-                            Button(
-                                onClick = {
-                                    selectedZone = code
-                                    refreshKey++
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selectedZone == code) Teal else LightNavy,
-                                    contentColor = if (selectedZone == code) White else Navy
-                                )
-                            ) {
-                                Text("Zone $code")
-                            }
-                        }
-                    }
-
-                    val zone = centralSystem
-                        .getBarangay(selectedBarangay)
-                        ?.terminal
-                        ?.getZone(selectedZone)
-
-                    if (zone != null) {
-
-                        InfoCard(
-                            title = zone.zoneName,
-                            description = "Base Fare: PHP ${"%.2f".format(zone.baseFare)}\nWaiting Tricycles: ${zone.getQueueSize()}"
-                        )
-
-                        val nextTricycle = zone.peekNext()
-
-                        InfoCard(
-                            title = "Next Tricycle in Queue",
-                            description = if (nextTricycle != null) {
-                                "Body Number: #${nextTricycle.bodyNumber}\nDriver: ${nextTricycle.driver.name}\nPassenger Capacity: ${nextTricycle.passengerCapacity}"
-                            } else {
-                                "No waiting tricycle available."
-                            }
-                        )
-
-                    } else {
-
-                        InfoCard(
-                            title = "Terminal Information",
-                            description = "The selected barangay terminal or service zone could not be found."
-                        )
-                    }
-
-                    FormLabel("NUMBER OF PASSENGERS")
-
-                    OutlinedTextField(
-                        value = passengerCount,
-                        onValueChange = {
-                            passengerCount = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text("Enter passenger count")
-                        },
-                        singleLine = true
-                    )
-
-                    FormLabel("CASH RECEIVED (PHP)")
-
-                    OutlinedTextField(
-                        value = cashReceived,
-                        onValueChange = {
-                            cashReceived = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text("Enter amount received")
-                        },
-                        singleLine = true
-                    )
-
-                    Card(
-                        shape = RoundedCornerShape(15.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = LightAmber
-                        )
-                    ) {
                         Text(
-                            "Reminder: The passenger pays the admin directly before the tricycle is dispatched.",
-                            modifier = Modifier.padding(15.dp),
-                            color = Navy,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp
+                            "Tricycle Queue",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
                         )
-                    }
 
-                    PrimaryButton(
-                        text = "Dispatch Next - Zone $selectedZone",
-                        onClick = {
-
-                            val passengers = passengerCount.toIntOrNull()
-                            val cash = cashReceived.toDoubleOrNull()
-
-                            if (passengers == null || cash == null) {
-
-                                message =
-                                    "Please enter valid passenger and payment information."
-                                messageSuccess = false
-
-                            } else {
-
-                                val result = centralSystem.dispatchNext(
-                                    selectedBarangay,
-                                    selectedZone,
-                                    passengers,
-                                    cash
-                                )
-
-                                message = result.message
-                                messageSuccess = result.successful
-
-                                if (result.successful && result.ride != null) {
-
-                                    selectedRide = result.ride
-                                    currentScreen = "ticket"
-
-                                    cashReceived = ""
-                                    passengerCount = "1"
-                                }
-
-                                refreshKey++
-                            }
-                        }
-                    )
-
-                    if (message.isNotEmpty()) {
-                        MessageCard(message, messageSuccess)
-                    }
-
-                    BackButton {
-                        currentScreen = "dashboard"
-                    }
-                }
-
-                // =================================
-                // 8. DISPATCH TICKET
-                // =================================
-
-                "ticket" -> {
-
-                    val ride = selectedRide
-
-                    AppHeader(subtitle = "DISPATCH CONFIRMATION")
-
-                    Text(
-                        "Dispatch Successful!",
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text(
-                        "The next tricycle has been successfully dispatched.",
-                        color = Gray
-                    )
-
-                    if (ride != null) {
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Teal
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(22.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-
-                                Text(
-                                    "ASSIGNED TRICYCLE",
-                                    color = White,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-
-                                Text(
-                                    "#${ride.assignedTricycle.bodyNumber}",
-                                    color = White,
-                                    fontSize = 36.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-
-                                Text(
-                                    "Driver: ${ride.assignedTricycle.driver.name}",
-                                    color = White
-                                )
-
-                                HorizontalDivider(
-                                    color = White.copy(alpha = 0.4f)
-                                )
-
-                                Text(
-                                    "ZONE ${ride.zoneCode}",
-                                    color = Amber,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    "PAYMENT: PAID",
-                                    color = White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        InfoCard(
-                            title = "Payment Summary",
-                            description = "Fare: PHP ${"%.2f".format(ride.fare)}\nCash Received: PHP ${"%.2f".format(ride.cashReceived)}\nChange: PHP ${"%.2f".format(ride.change)}"
+                        Text(
+                            "Monitor the waiting tricycles in each service zone.",
+                            color = Gray
                         )
 
                         InfoCard(
-                            title = "Ride Information",
-                            description = "Ride ID: ${ride.rideId}\nBarangay: ${ride.barangayName}\nZone: ${ride.zoneCode} - ${ride.zoneName}\nPassengers: ${ride.passengerCount}\nStatus: ${ride.status}"
+                            title = "Selected Barangay",
+                            description = "$selectedBarangay TODA Terminal"
                         )
 
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(15.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = White
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(15.dp)
-                            ) {
+                        val barangay =
+                            centralSystem.getBarangay(selectedBarangay)
+
+                        if (barangay != null) {
+
+                            val zones = barangay.terminal
+                                .getAllZones()
+                                .sortedBy { it.zoneCode }
+
+                            for (zone in zones) {
 
                                 Text(
-                                    "PHYSICAL TICKET / STUB",
+                                    "ZONE ${zone.zoneCode} - ${zone.zoneName}",
                                     color = Teal,
                                     fontWeight = FontWeight.Bold
                                 )
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                                val queue = zone.getQueue()
 
-                                Text(
-                                    "TRICYCLE #${ride.assignedTricycle.bodyNumber} - ZONE ${ride.zoneCode} - PAID",
-                                    color = Navy,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 17.sp
-                                )
+                                if (queue.isEmpty()) {
 
-                                Text(
-                                    "Give this ticket to the passenger or use it as a dispatch reference.",
-                                    color = Gray,
-                                    fontSize = 12.sp
-                                )
+                                    InfoCard(
+                                        title = "No Waiting Tricycles",
+                                        description = "There are currently no tricycles in this zone."
+                                    )
+
+                                } else {
+
+                                    for ((index, tricycle) in queue.withIndex()) {
+
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(15.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = White
+                                            )
+                                        ) {
+
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(15.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(42.dp)
+                                                        .background(
+                                                            if (index == 0) LightAmber else LightTeal,
+                                                            RoundedCornerShape(12.dp)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        "${index + 1}",
+                                                        color = Navy,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.width(12.dp))
+
+                                                Column(
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+
+                                                    Text(
+                                                        "Tricycle #${tricycle.bodyNumber}",
+                                                        color = Navy,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+
+                                                    Text(
+                                                        tricycle.driver.name,
+                                                        color = Gray,
+                                                        fontSize = 12.sp
+                                                    )
+
+                                                    Text(
+                                                        "Capacity: ${tricycle.passengerCapacity}",
+                                                        color = Gray,
+                                                        fontSize = 12.sp
+                                                    )
+                                                }
+
+                                                if (index == 0) {
+                                                    StatusBadge("NEXT")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
+
+                        } else {
+
+                            InfoCard(
+                                title = "Terminal Not Found",
+                                description = "Return to Barangay Selection and choose a registered terminal."
+                            )
                         }
 
                         PrimaryButton(
-                            text = "View Complete Ticket",
+                            text = "Refresh Queue",
                             onClick = {
-                                message = ride.generateTicket()
-                                currentScreen = "ticketDetails"
+
+                                refreshKey++
+
+                                message = "Queue information refreshed."
+                                messageSuccess = true
                             }
                         )
+
+                        if (message.isNotEmpty()) {
+                            MessageCard(message, messageSuccess)
+                        }
+
+                        BackButton {
+                            currentScreen = "terminal"
+                        }
                     }
 
-                    PrimaryButton(
-                        text = "Return to Dashboard",
-                        onClick = {
-                            selectedRide = null
-                            message = ""
-                            currentScreen = "dashboard"
-                        }
-                    )
-                }
+                    // =================================
+                    // 8. PASSENGER PAYMENT & DISPATCH
+                    // =================================
 
-                // =================================
-                // 9. FULL TICKET DETAILS
-                // =================================
+                    "dispatch" -> {
 
-                "ticketDetails" -> {
+                        AppHeader(subtitle = "PASSENGER DISPATCH")
 
-                    AppHeader(subtitle = "PHYSICAL DISPATCH TICKET")
-
-                    Text(
-                        "Ticket Details",
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = White
-                        )
-                    ) {
                         Text(
-                            selectedRide?.generateTicket()
-                                ?: "No ticket available.",
-                            modifier = Modifier.padding(18.dp),
-                            color = Navy,
-                            fontSize = 14.sp,
-                            lineHeight = 23.sp
-                        )
-                    }
-
-                    PrimaryButton(
-                        text = "Back to Dispatch Result",
-                        onClick = {
-                            currentScreen = "ticket"
-                        }
-                    )
-                }
-
-                // =================================
-                // 10. RIDE LOGBOOK
-                // =================================
-
-                "logbook" -> {
-
-                    AppHeader(subtitle = "TERMINAL LOGBOOK")
-
-                    Text(
-                        "Ride Logbook",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Navy
-                    )
-
-                    Text(
-                        "Monitor and manage all recorded dispatch transactions.",
-                        color = Gray,
-                        lineHeight = 22.sp
-                    )
-
-                    val terminalRideRecords = centralSystem
-                        .getAllRides()
-                        .filter {
-                            it.barangayName == selectedBarangay
-                        }
-
-                    val terminalCompletedCount =
-                        terminalRideRecords.count {
-                            it.status == "COMPLETED"
-                        }
-
-                    val terminalCollections =
-                        terminalRideRecords.sumOf {
-                            it.fare
-                        }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-
-                        StatCard(
-                            number = terminalRideRecords.size.toString(),
-                            label = "Total Trips",
-                            modifier = Modifier.weight(1f)
+                            "Dispatch Next Tricycle",
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
                         )
 
-                        StatCard(
-                            number = terminalCompletedCount.toString(),
-                            label = "Completed",
-                            modifier = Modifier.weight(1f)
+                        Text(
+                            "Enter the passenger's details and collect the cash payment before dispatching.",
+                            color = Gray,
+                            lineHeight = 22.sp
                         )
-                    }
-
-                    InfoCard(
-                        title = "Total Fare Collections",
-                        description = "PHP ${"%.2f".format(terminalCollections)}"
-                    )
-
-                    val rides = terminalRideRecords.reversed()
-
-                    if (rides.isEmpty()) {
 
                         InfoCard(
-                            title = "No Records Yet",
-                            description = "Dispatched trips for $selectedBarangay will appear here automatically."
+                            title = "Selected Barangay Terminal",
+                            description = "$selectedBarangay TODA Terminal"
                         )
 
-                    } else {
+                        FormLabel("DESTINATION / SERVICE ZONE")
 
-                        for (ride in rides) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            for (code in listOf("A", "B", "C")) {
+
+                                Button(
+                                    onClick = {
+                                        selectedZone = code
+                                        refreshKey++
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (selectedZone == code) Teal else LightNavy,
+                                        contentColor = if (selectedZone == code) White else Navy
+                                    )
+                                ) {
+                                    Text("Zone $code")
+                                }
+                            }
+                        }
+
+                        val zone = centralSystem
+                            .getBarangay(selectedBarangay)
+                            ?.terminal
+                            ?.getZone(selectedZone)
+
+                        if (zone != null) {
+
+                            InfoCard(
+                                title = zone.zoneName,
+                                description = "Base Fare: PHP ${"%.2f".format(zone.baseFare)}\nWaiting Tricycles: ${zone.getQueueSize()}"
+                            )
+
+                            val nextTricycle = zone.peekNext()
+
+                            InfoCard(
+                                title = "Next Tricycle in Queue",
+                                description = if (nextTricycle != null) {
+                                    "Body Number: #${nextTricycle.bodyNumber}\nDriver: ${nextTricycle.driver.name}\nPassenger Capacity: ${nextTricycle.passengerCapacity}"
+                                } else {
+                                    "No waiting tricycle available."
+                                }
+                            )
+
+                        } else {
+
+                            InfoCard(
+                                title = "Terminal Information",
+                                description = "The selected barangay terminal or service zone could not be found."
+                            )
+                        }
+
+                        FormLabel("NUMBER OF PASSENGERS")
+
+                        OutlinedTextField(
+                            value = passengerCount,
+                            onValueChange = {
+                                passengerCount = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text("Enter passenger count")
+                            },
+                            singleLine = true
+                        )
+
+                        FormLabel("CASH RECEIVED (PHP)")
+
+                        OutlinedTextField(
+                            value = cashReceived,
+                            onValueChange = {
+                                cashReceived = it
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text("Enter amount received")
+                            },
+                            singleLine = true
+                        )
+
+                        Card(
+                            shape = RoundedCornerShape(15.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = LightAmber
+                            )
+                        ) {
+                            Text(
+                                "Reminder: The passenger pays the admin directly before the tricycle is dispatched.",
+                                modifier = Modifier.padding(15.dp),
+                                color = Navy,
+                                fontSize = 13.sp,
+                                lineHeight = 20.sp
+                            )
+                        }
+
+                        PrimaryButton(
+                            text = "Dispatch Next - Zone $selectedZone",
+                            onClick = {
+
+                                val passengers = passengerCount.toIntOrNull()
+                                val cash = cashReceived.toDoubleOrNull()
+
+                                if (passengers == null || cash == null) {
+
+                                    message = "Please enter valid passenger and payment information."
+                                    messageSuccess = false
+
+                                } else {
+
+                                    val result = centralSystem.dispatchNext(
+                                        selectedBarangay,
+                                        selectedZone,
+                                        passengers,
+                                        cash
+                                    )
+
+                                    message = result.message
+                                    messageSuccess = result.successful
+
+                                    if (result.successful && result.ride != null) {
+
+                                        selectedRide = result.ride
+                                        currentScreen = "ticket"
+
+                                        cashReceived = ""
+                                        passengerCount = "1"
+                                    }
+
+                                    refreshKey++
+                                }
+                            }
+                        )
+
+                        if (message.isNotEmpty()) {
+                            MessageCard(message, messageSuccess)
+                        }
+
+                        BackButton {
+                            currentScreen = "dashboard"
+                        }
+                    }
+
+                    // =================================
+                    // 9. DISPATCH TICKET
+                    // =================================
+
+                    "ticket" -> {
+
+                        val ride = selectedRide
+
+                        AppHeader(subtitle = "DISPATCH CONFIRMATION")
+
+                        Text(
+                            "Dispatch Successful!",
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text(
+                            "The next tricycle has been successfully dispatched.",
+                            color = Gray
+                        )
+
+                        if (ride != null) {
 
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(17.dp),
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Teal
+                                )
+                            ) {
+
+                                Column(
+                                    modifier = Modifier.padding(22.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+
+                                    Text(
+                                        "ASSIGNED TRICYCLE",
+                                        color = White,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+
+                                    Text(
+                                        "#${ride.assignedTricycle.bodyNumber}",
+                                        color = White,
+                                        fontSize = 36.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+
+                                    Text(
+                                        "Driver: ${ride.assignedTricycle.driver.name}",
+                                        color = White
+                                    )
+
+                                    HorizontalDivider(
+                                        color = White.copy(alpha = 0.4f)
+                                    )
+
+                                    Text(
+                                        "ZONE ${ride.zoneCode}",
+                                        color = Amber,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Text(
+                                        "PAYMENT: PAID",
+                                        color = White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            InfoCard(
+                                title = "Payment Summary",
+                                description = "Fare: PHP ${"%.2f".format(ride.fare)}\nCash Received: PHP ${"%.2f".format(ride.cashReceived)}\nChange: PHP ${"%.2f".format(ride.change)}"
+                            )
+
+                            InfoCard(
+                                title = "Ride Information",
+                                description = "Ride ID: ${ride.rideId}\nBarangay: ${ride.barangayName}\nZone: ${ride.zoneCode} - ${ride.zoneName}\nPassengers: ${ride.passengerCount}\nStatus: ${ride.status}"
+                            )
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(15.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = White
                                 )
                             ) {
+
                                 Column(
-                                    modifier = Modifier.padding(17.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    modifier = Modifier.padding(15.dp)
                                 ) {
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Text(
+                                        "PHYSICAL TICKET / STUB",
+                                        color = Teal,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Text(
+                                        "TRICYCLE #${ride.assignedTricycle.bodyNumber} - ZONE ${ride.zoneCode} - PAID",
+                                        color = Navy,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 17.sp
+                                    )
+
+                                    Text(
+                                        "Give this ticket to the passenger or use it as a dispatch reference.",
+                                        color = Gray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            PrimaryButton(
+                                text = "View Complete Ticket",
+                                onClick = {
+                                    message = ride.generateTicket()
+                                    currentScreen = "ticketDetails"
+                                }
+                            )
+                        }
+
+                        PrimaryButton(
+                            text = "Return to Dashboard",
+                            onClick = {
+                                selectedRide = null
+                                message = ""
+                                currentScreen = "dashboard"
+                            }
+                        )
+                    }
+
+                    // =================================
+                    // 10. FULL TICKET DETAILS
+                    // =================================
+
+                    "ticketDetails" -> {
+
+                        AppHeader(subtitle = "PHYSICAL DISPATCH TICKET")
+
+                        Text(
+                            "Ticket Details",
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = White
+                            )
+                        ) {
+                            Text(
+                                selectedRide?.generateTicket()
+                                    ?: "No ticket available.",
+                                modifier = Modifier.padding(18.dp),
+                                color = Navy,
+                                fontSize = 14.sp,
+                                lineHeight = 23.sp
+                            )
+                        }
+
+                        PrimaryButton(
+                            text = "Back to Dispatch Result",
+                            onClick = {
+                                currentScreen = "ticket"
+                            }
+                        )
+                    }
+
+                    // =================================
+                    // 11. RIDE LOGBOOK
+                    // =================================
+
+                    "logbook" -> {
+
+                        AppHeader(subtitle = "TERMINAL LOGBOOK")
+
+                        Text(
+                            "Ride Logbook",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Navy
+                        )
+
+                        Text(
+                            "Monitor and manage all recorded dispatch transactions.",
+                            color = Gray,
+                            lineHeight = 22.sp
+                        )
+
+                        val terminalRideRecords = centralSystem
+                            .getAllRides()
+                            .filter {
+                                it.barangayName == selectedBarangay
+                            }
+
+                        val terminalCompletedCount =
+                            terminalRideRecords.count {
+                                it.status == "COMPLETED"
+                            }
+
+                        val terminalCollections =
+                            terminalRideRecords.sumOf {
+                                it.fare
+                            }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+
+                            StatCard(
+                                number = terminalRideRecords.size.toString(),
+                                label = "Total Trips",
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            StatCard(
+                                number = terminalCompletedCount.toString(),
+                                label = "Completed",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        InfoCard(
+                            title = "Total Fare Collections",
+                            description = "PHP ${"%.2f".format(terminalCollections)}"
+                        )
+
+                        val rides = terminalRideRecords.reversed()
+
+                        if (rides.isEmpty()) {
+
+                            InfoCard(
+                                title = "No Records Yet",
+                                description = "Dispatched trips for $selectedBarangay will appear here automatically."
+                            )
+
+                        } else {
+
+                            for (ride in rides) {
+
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(17.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = White
+                                    )
+                                ) {
+
+                                    Column(
+                                        modifier = Modifier.padding(17.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
 
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+
+                                            Text(
+                                                "RIDE #${ride.rideId}",
+                                                color = Navy,
+                                                fontWeight = FontWeight.Bold
+                                            )
+
+                                            StatusBadge(ride.status)
+                                        }
+
                                         Text(
-                                            "RIDE #${ride.rideId}",
-                                            color = Navy,
-                                            fontWeight = FontWeight.Bold
+                                            "Tricycle #${ride.assignedTricycle.bodyNumber}",
+                                            color = Teal,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp
                                         )
 
-                                        StatusBadge(ride.status)
-                                    }
+                                        Text(
+                                            "Driver: ${ride.assignedTricycle.driver.name}\nBarangay: ${ride.barangayName}\nZone: ${ride.zoneCode} - ${ride.zoneName}\nPassengers: ${ride.passengerCount}\nFare: PHP ${"%.2f".format(ride.fare)}\nPayment: PAID",
+                                            color = Gray,
+                                            fontSize = 13.sp,
+                                            lineHeight = 21.sp
+                                        )
 
-                                    Text(
-                                        "Tricycle #${ride.assignedTricycle.bodyNumber}",
-                                        color = Teal,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp
-                                    )
+                                        if (ride.status == "ONGOING") {
 
-                                    Text(
-                                        "Driver: ${ride.assignedTricycle.driver.name}\nBarangay: ${ride.barangayName}\nZone: ${ride.zoneCode} - ${ride.zoneName}\nPassengers: ${ride.passengerCount}\nFare: PHP ${"%.2f".format(ride.fare)}\nPayment: PAID",
-                                        color = Gray,
-                                        fontSize = 13.sp,
-                                        lineHeight = 21.sp
-                                    )
+                                            Button(
+                                                onClick = {
 
-                                    if (ride.status == "ONGOING") {
+                                                    val result =
+                                                        centralSystem.completeRide(ride.rideId)
 
-                                        Button(
-                                            onClick = {
+                                                    message = result.message
+                                                    messageSuccess = result.successful
 
-                                                val result =
-                                                    centralSystem.completeRide(ride.rideId)
-
-                                                message = result.message
-                                                messageSuccess = result.successful
-
-                                                refreshKey++
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Teal
-                                            )
-                                        ) {
-                                            Text("Mark Ride as Completed")
+                                                    refreshKey++
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Teal
+                                                )
+                                            ) {
+                                                Text("Mark Ride as Completed")
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if (message.isNotEmpty()) {
-                        MessageCard(message, messageSuccess)
-                    }
-
-                    // Clicking this button opens the confirmation dialog.
-                    PrimaryButton(
-                        text = "Refresh Logbook",
-                        onClick = {
-                            showLogbookRefreshDialog = true
+                        if (message.isNotEmpty()) {
+                            MessageCard(message, messageSuccess)
                         }
-                    )
 
-                    BackButton {
-                        showLogbookRefreshDialog = false
-                        currentScreen = "dashboard"
+                        PrimaryButton(
+                            text = "Refresh Logbook",
+                            onClick = {
+                                showLogbookRefreshDialog = true
+                            }
+                        )
+
+                        BackButton {
+                            showLogbookRefreshDialog = false
+                            currentScreen = "dashboard"
+                        }
                     }
                 }
+
+                // ==========================================
+                // FOOTER
+                // ==========================================
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                HorizontalDivider(color = Color.LightGray)
+
+                Text(
+                    "TRICYCLE DISPATCH & ZONE APP",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 10.sp,
+                    color = Gray,
+                    letterSpacing = 1.sp
+                )
+
+                Text(
+                    "NASUGBU, BATANGAS • ADMIN SYSTEM",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 9.sp,
+                    color = Gray
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
             }
-
-            // ==========================================
-            // FOOTER
-            // ==========================================
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            HorizontalDivider(color = Color.LightGray)
-
-            Text(
-                "TRICYCLE DISPATCH & ZONE APP",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 10.sp,
-                color = Gray,
-                letterSpacing = 1.sp
-            )
-
-            Text(
-                "NASUGBU, BATANGAS • ADMIN SYSTEM",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 9.sp,
-                color = Gray
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }
 
 // ==========================================
 // REUSABLE APP HEADER
+// NOW USES THE EMBLEM LOGO INSTEAD OF THE "TD" BOX
 // ==========================================
 
 @Composable
@@ -1497,19 +1754,16 @@ fun AppHeader(subtitle: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
 
-        Box(
+        Image(
+            painter = painterResource(
+                id = R.drawable.tricycle_logo
+            ),
+            contentDescription = "Tricycle Dispatch Logo",
             modifier = Modifier
-                .size(48.dp)
-                .background(Navy, RoundedCornerShape(15.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "TD",
-                color = Amber,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 19.sp
-            )
-        }
+                .size(56.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Fit
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -1536,7 +1790,10 @@ fun AppHeader(subtitle: String) {
 // ==========================================
 
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit) {
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit
+) {
 
     Button(
         onClick = onClick,
@@ -1578,7 +1835,10 @@ fun BackButton(onClick: () -> Unit) {
 // ==========================================
 
 @Composable
-fun InfoCard(title: String, description: String) {
+fun InfoCard(
+    title: String,
+    description: String
+) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1590,6 +1850,7 @@ fun InfoCard(title: String, description: String) {
             defaultElevation = 1.dp
         )
     ) {
+
         Column(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(7.dp)
@@ -1630,6 +1891,7 @@ fun StatCard(
             containerColor = White
         )
     ) {
+
         Column(
             modifier = Modifier.padding(17.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1677,6 +1939,7 @@ fun MenuCard(
             defaultElevation = 1.dp
         )
     ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1770,6 +2033,7 @@ fun StatusBadge(text: String) {
                 vertical = 6.dp
             )
     ) {
+
         Text(
             text,
             color = if (isNext || isOngoing) Navy else Teal,
@@ -1784,7 +2048,10 @@ fun StatusBadge(text: String) {
 // ==========================================
 
 @Composable
-fun MessageCard(message: String, successful: Boolean) {
+fun MessageCard(
+    message: String,
+    successful: Boolean
+) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1793,6 +2060,7 @@ fun MessageCard(message: String, successful: Boolean) {
             containerColor = if (successful) LightTeal else LightAmber
         )
     ) {
+
         Text(
             message,
             modifier = Modifier.padding(15.dp),
