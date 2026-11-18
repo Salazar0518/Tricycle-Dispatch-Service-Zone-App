@@ -1,7 +1,52 @@
+
 package com.example.tricycledispatchandzoneapp
 
 // ==========================================
-// 1. ABSTRACT PERSON CLASS
+// 1. ADMIN CLASS
+// ADMIN LOGIN AUTHENTICATION
+// ==========================================
+
+class Admin(
+    private val username: String,
+    private val password: String
+) {
+
+    fun login(
+        enteredUsername: String,
+        enteredPassword: String
+    ): Boolean {
+
+        return enteredUsername == username &&
+                enteredPassword == password
+    }
+}
+
+// ==========================================
+// 2. ADMIN AUTHENTICATION
+// ==========================================
+
+class AdminAuthentication {
+
+    private val admin = Admin(
+        "admin",
+        "admin123"
+    )
+
+    fun authenticate(
+        username: String,
+        password: String
+    ): Boolean {
+
+        if (username.isBlank() || password.isBlank()) {
+            return false
+        }
+
+        return admin.login(username.trim(), password)
+    }
+}
+
+// ==========================================
+// 3. ABSTRACT PERSON CLASS
 // ABSTRACTION
 // ==========================================
 
@@ -17,9 +62,8 @@ abstract class Person(
     }
 }
 
-
 // ==========================================
-// 2. DRIVER CLASS
+// 4. DRIVER CLASS
 // INHERITANCE AND POLYMORPHISM
 // ==========================================
 
@@ -35,9 +79,8 @@ class Driver(
     }
 }
 
-
 // ==========================================
-// 3. TRICYCLE CLASS
+// 5. TRICYCLE CLASS
 // ENCAPSULATION
 // ==========================================
 
@@ -53,52 +96,37 @@ class Tricycle(
     var currentRideId: Int? = null
         private set
 
-    // DISPATCH TRICYCLE
-
     fun dispatch(rideId: Int): Boolean {
 
         if (status == "WAITING") {
-
             status = "ON TRIP"
             currentRideId = rideId
-
             return true
         }
 
         return false
     }
-
-    // COMPLETE RIDE
 
     fun completeRide(rideId: Int): Boolean {
 
-        if (currentRideId == rideId &&
-            status == "ON TRIP"
-        ) {
-
+        if (currentRideId == rideId && status == "ON TRIP") {
             status = "AVAILABLE"
             currentRideId = null
-
             return true
         }
 
         return false
     }
-
-    // SET WAITING STATUS
 
     fun setWaiting(): Boolean {
 
         if (status == "AVAILABLE") {
-
             status = "WAITING"
             return true
         }
 
         return false
     }
-
-    // DISPLAY TRICYCLE INFORMATION
 
     fun getInformation(): String {
 
@@ -109,9 +137,8 @@ class Tricycle(
     }
 }
 
-
 // ==========================================
-// 4. SERVICE ZONE CLASS
+// 6. SERVICE ZONE CLASS
 // FIFO QUEUE MANAGEMENT
 // ==========================================
 
@@ -122,40 +149,19 @@ class ServiceZone(
     var baseFare: Double
 ) {
 
-    // KOTLIN COLLECTION
-    // FIRST IN, FIRST OUT
-
-    private val tricycleQueue =
-        mutableListOf<Tricycle>()
-
-    // DRIVER TIME-IN
+    private val tricycleQueue = mutableListOf<Tricycle>()
 
     fun timeIn(tricycle: Tricycle): Boolean {
 
-        if (tricycle.passengerCapacity < 1) {
-            return false
-        }
+        if (tricycle.passengerCapacity < 1) return false
+        if (tricycle.status != "AVAILABLE") return false
+        if (containsBodyNumber(tricycle.bodyNumber)) return false
 
-        if (tricycle.status != "AVAILABLE") {
-            return false
-        }
-
-        if (containsBodyNumber(tricycle.bodyNumber)) {
-            return false
-        }
-
-        val waiting = tricycle.setWaiting()
-
-        if (!waiting) {
-            return false
-        }
+        if (!tricycle.setWaiting()) return false
 
         tricycleQueue.add(tricycle)
-
         return true
     }
-
-    // CHECK DUPLICATE BODY NUMBER
 
     fun containsBodyNumber(bodyNumber: String): Boolean {
 
@@ -173,60 +179,39 @@ class ServiceZone(
         return false
     }
 
-    // GET NEXT TRICYCLE WITHOUT REMOVING
-
     fun peekNext(): Tricycle? {
-
         return tricycleQueue.firstOrNull()
     }
 
-    // DISPATCH NEXT TRICYCLE
-    // FIFO: FIRST TRICYCLE IN, FIRST TRICYCLE OUT
-
     fun dispatchNext(): Tricycle? {
 
-        if (tricycleQueue.isEmpty()) {
-            return null
-        }
+        if (tricycleQueue.isEmpty()) return null
 
         return tricycleQueue.removeAt(0)
     }
 
-    // GET ALL WAITING TRICYCLES
-
     fun getQueue(): List<Tricycle> {
-
         return tricycleQueue.toList()
     }
 
-    // GET QUEUE SIZE
-
     fun getQueueSize(): Int {
-
         return tricycleQueue.size
     }
 }
 
-
 // ==========================================
-// 5. TODA TERMINAL CLASS
+// 7. TODA TERMINAL CLASS
 // ==========================================
 
 class TodaTerminal(
     val terminalName: String
 ) {
 
-    // ENCAPSULATION
-    // PRIVATE SERVICE ZONES
-
-    private val serviceZones =
-        mutableMapOf<String, ServiceZone>()
+    private val serviceZones = mutableMapOf<String, ServiceZone>()
 
     init {
         initializeServiceZones()
     }
-
-    // INITIALIZE THREE SERVICE ZONES
 
     private fun initializeServiceZones() {
 
@@ -252,21 +237,13 @@ class TodaTerminal(
         )
     }
 
-    // GET ONE SERVICE ZONE
-
     fun getZone(zoneCode: String): ServiceZone? {
-
         return serviceZones[zoneCode.uppercase()]
     }
 
-    // GET ALL SERVICE ZONES
-
     fun getAllZones(): List<ServiceZone> {
-
         return serviceZones.values.toList()
     }
-
-    // GET QUEUE OF A SELECTED ZONE
 
     fun getZoneQueue(zoneCode: String): List<Tricycle> {
 
@@ -280,9 +257,8 @@ class TodaTerminal(
     }
 }
 
-
 // ==========================================
-// 6. BARANGAY CLASS
+// 8. BARANGAY CLASS
 // COMPOSITION
 // ==========================================
 
@@ -290,16 +266,13 @@ class Barangay(
     val barangayName: String
 ) {
 
-    // A BARANGAY HAS ITS OWN TODA TERMINAL
-
     val terminal = TodaTerminal(
         "$barangayName TODA Terminal"
     )
 }
 
-
 // ==========================================
-// 7. RIDE CLASS
+// 9. RIDE CLASS
 // ==========================================
 
 class Ride(
@@ -318,8 +291,6 @@ class Ride(
 
     val change: Double
         get() = cashReceived - fare
-
-    // PHYSICAL TICKET INFORMATION
 
     fun generateTicket(): String {
 
@@ -343,19 +314,14 @@ class Ride(
         """.trimIndent()
     }
 
-    // COMPLETE RIDE
-
     fun complete(): Boolean {
 
         if (status == "ONGOING") {
 
-            val completed =
-                assignedTricycle.completeRide(rideId)
+            val completed = assignedTricycle.completeRide(rideId)
 
             if (completed) {
-
                 status = "COMPLETED"
-
                 return true
             }
         }
@@ -364,9 +330,8 @@ class Ride(
     }
 }
 
-
 // ==========================================
-// 8. DISPATCH RESULT CLASS
+// 10. DISPATCH RESULT CLASS
 // ==========================================
 
 class DispatchResult(
@@ -375,40 +340,23 @@ class DispatchResult(
     val ride: Ride? = null
 )
 
-
 // ==========================================
-// 9. NASUGBU CENTRAL SYSTEM
+// 11. NASUGBU CENTRAL SYSTEM
 // MAIN BACKEND CLASS
 // ==========================================
 
 class NasugbuCentralSystem {
 
-    // MAIN BARANGAY DATABASE
-
-    private val barangayMap =
-        mutableMapOf<String, Barangay>()
-
-    // PRESERVE BARANGAY ORDER
-
-    private val barangayList =
-        mutableListOf<Barangay>()
-
-    // TRICYCLE REGISTRY
-
-    private val tricycleRegistry =
-        mutableMapOf<String, Tricycle>()
-
-    // AUTOMATED RIDE LOGBOOK
-
-    private val rideLogbook =
-        mutableListOf<Ride>()
+    private val barangayMap = mutableMapOf<String, Barangay>()
+    private val barangayList = mutableListOf<Barangay>()
+    private val tricycleRegistry = mutableMapOf<String, Tricycle>()
+    private val rideLogbook = mutableListOf<Ride>()
 
     private var nextRideId = 1
 
     init {
         initializeBarangays()
     }
-
 
     // ======================================
     // INITIALIZE ALL 42 BARANGAYS
@@ -466,31 +414,25 @@ class NasugbuCentralSystem {
             val barangay = Barangay(name)
 
             barangayMap[name.lowercase()] = barangay
-
             barangayList.add(barangay)
         }
     }
-
 
     // ======================================
     // BARANGAY OPERATIONS
     // ======================================
 
     fun getAllBarangays(): List<Barangay> {
-
         return barangayList.toList()
     }
 
     fun getBarangay(name: String): Barangay? {
-
         return barangayMap[name.trim().lowercase()]
     }
 
     fun getTotalBarangays(): Int {
-
         return barangayMap.size
     }
-
 
     // ======================================
     // SET SERVICE ZONE FARE
@@ -502,21 +444,15 @@ class NasugbuCentralSystem {
         newFare: Double
     ): Boolean {
 
-        if (newFare <= 0) {
-            return false
-        }
+        if (newFare <= 0) return false
 
-        val barangay = getBarangay(barangayName)
-            ?: return false
-
-        val zone = barangay.terminal.getZone(zoneCode)
-            ?: return false
+        val barangay = getBarangay(barangayName) ?: return false
+        val zone = barangay.terminal.getZone(zoneCode) ?: return false
 
         zone.baseFare = newFare
 
         return true
     }
-
 
     // ======================================
     // DRIVER TIME-IN
@@ -533,26 +469,13 @@ class NasugbuCentralSystem {
 
         val barangay = getBarangay(barangayName)
 
-        if (barangay == null) {
-
-            return DispatchResult(
-                false,
-                "Barangay not found."
-            )
-        }
+            ?: return DispatchResult(false, "Barangay not found.")
 
         val zone = barangay.terminal.getZone(zoneCode)
 
-        if (zone == null) {
-
-            return DispatchResult(
-                false,
-                "Service zone not found."
-            )
-        }
+            ?: return DispatchResult(false, "Service zone not found.")
 
         if (bodyNumber.isBlank() || driverName.isBlank()) {
-
             return DispatchResult(
                 false,
                 "Body number and driver name are required."
@@ -560,17 +483,10 @@ class NasugbuCentralSystem {
         }
 
         if (driverId <= 0) {
-
-            return DispatchResult(
-                false,
-                "Invalid driver ID."
-            )
+            return DispatchResult(false, "Invalid driver ID.")
         }
 
-        if (passengerCapacity < 1 ||
-            passengerCapacity > 5
-        ) {
-
+        if (passengerCapacity !in 1..5) {
             return DispatchResult(
                 false,
                 "Passenger capacity must be between 1 and 5."
@@ -578,38 +494,29 @@ class NasugbuCentralSystem {
         }
 
         val cleanBodyNumber = bodyNumber.trim()
-
         val bodyKey = cleanBodyNumber.lowercase()
 
-        val existingTricycle =
-            tricycleRegistry[bodyKey]
+        val existingTricycle = tricycleRegistry[bodyKey]
 
         if (existingTricycle != null &&
             existingTricycle.status != "AVAILABLE"
         ) {
-
             return DispatchResult(
                 false,
                 "This tricycle is already waiting or on a trip."
             )
         }
 
-        // CREATE DRIVER OBJECT
-
         val driver = Driver(
             driverName.trim(),
             driverId
         )
-
-        // CREATE TRICYCLE OBJECT
 
         val tricycle = Tricycle(
             cleanBodyNumber,
             driver,
             passengerCapacity
         )
-
-        // ADD TRICYCLE TO QUEUE
 
         val added = zone.timeIn(tricycle)
 
@@ -629,7 +536,6 @@ class NasugbuCentralSystem {
         )
     }
 
-
     // ======================================
     // GET QUEUE
     // ======================================
@@ -645,7 +551,6 @@ class NasugbuCentralSystem {
         return barangay.terminal.getZoneQueue(zoneCode)
     }
 
-
     // ======================================
     // PASSENGER PAYMENT AND DISPATCH
     // ======================================
@@ -658,27 +563,12 @@ class NasugbuCentralSystem {
     ): DispatchResult {
 
         val barangay = getBarangay(barangayName)
-
-        if (barangay == null) {
-
-            return DispatchResult(
-                false,
-                "Barangay not found."
-            )
-        }
+            ?: return DispatchResult(false, "Barangay not found.")
 
         val zone = barangay.terminal.getZone(zoneCode)
-
-        if (zone == null) {
-
-            return DispatchResult(
-                false,
-                "Service zone not found."
-            )
-        }
+            ?: return DispatchResult(false, "Service zone not found.")
 
         if (passengerCount < 1) {
-
             return DispatchResult(
                 false,
                 "Passenger count must be at least 1."
@@ -686,85 +576,55 @@ class NasugbuCentralSystem {
         }
 
         if (zone.baseFare <= 0) {
-
             return DispatchResult(
                 false,
                 "Please configure the base fare for Zone $zoneCode first."
             )
         }
 
-        // CHECK FIRST TRICYCLE
-
         val nextTricycle = zone.peekNext()
-
-        if (nextTricycle == null) {
-
-            return DispatchResult(
+            ?: return DispatchResult(
                 false,
                 "No available tricycle in Zone $zoneCode."
             )
-        }
 
-        // CHECK PASSENGER CAPACITY
-
-        if (passengerCount >
-            nextTricycle.passengerCapacity
-        ) {
-
+        if (passengerCount > nextTricycle.passengerCapacity) {
             return DispatchResult(
                 false,
                 "The next tricycle can only accommodate ${nextTricycle.passengerCapacity} passengers. Please adjust the passenger count."
             )
         }
 
-        // CHECK CASH PAYMENT
-
         if (cashReceived < zone.baseFare) {
-
             return DispatchResult(
                 false,
                 "Insufficient payment. Required fare: PHP ${zone.baseFare}."
             )
         }
 
-        // CHECK IF TRICYCLE CAN BE DISPATCHED
-
         val newRideId = nextRideId
 
         if (nextTricycle.status != "WAITING") {
-
             return DispatchResult(
                 false,
                 "Tricycle is not waiting in the queue."
             )
         }
 
-        // REMOVE FIRST TRICYCLE FROM QUEUE
-
         val selectedTricycle = zone.dispatchNext()
-
-        if (selectedTricycle == null) {
-
-            return DispatchResult(
+            ?: return DispatchResult(
                 false,
                 "Unable to dispatch tricycle."
             )
-        }
 
-        // CHANGE STATUS TO ON TRIP
-
-        val dispatched =
-            selectedTricycle.dispatch(newRideId)
+        val dispatched = selectedTricycle.dispatch(newRideId)
 
         if (!dispatched) {
-
             return DispatchResult(
                 false,
                 "Tricycle dispatch failed."
             )
         }
-
-        // CREATE RIDE OBJECT
 
         val newRide = Ride(
             newRideId,
@@ -777,10 +637,7 @@ class NasugbuCentralSystem {
             cashReceived
         )
 
-        // SAVE TO LOGBOOK
-
         rideLogbook.add(newRide)
-
         nextRideId++
 
         return DispatchResult(
@@ -789,7 +646,6 @@ class NasugbuCentralSystem {
             newRide
         )
     }
-
 
     // ======================================
     // COMPLETE RIDE
@@ -802,24 +658,18 @@ class NasugbuCentralSystem {
         for (ride in rideLogbook) {
 
             if (ride.rideId == rideId) {
-
                 selectedRide = ride
                 break
             }
         }
 
         if (selectedRide == null) {
-
-            return DispatchResult(
-                false,
-                "Ride not found."
-            )
+            return DispatchResult(false, "Ride not found.")
         }
 
         val completed = selectedRide.complete()
 
         if (completed) {
-
             return DispatchResult(
                 true,
                 "Ride completed. Tricycle #${selectedRide.assignedTricycle.bodyNumber} is now available.",
@@ -833,13 +683,11 @@ class NasugbuCentralSystem {
         )
     }
 
-
     // ======================================
     // AUTOMATED LOGBOOK OPERATIONS
     // ======================================
 
     fun getAllRides(): List<Ride> {
-
         return rideLogbook.toList()
     }
 
@@ -850,7 +698,6 @@ class NasugbuCentralSystem {
         for (ride in rideLogbook) {
 
             if (ride.status == "ONGOING") {
-
                 result.add(ride)
             }
         }
@@ -865,7 +712,6 @@ class NasugbuCentralSystem {
         for (ride in rideLogbook) {
 
             if (ride.status == "COMPLETED") {
-
                 result.add(ride)
             }
         }
@@ -874,7 +720,6 @@ class NasugbuCentralSystem {
     }
 
     fun getTotalTrips(): Int {
-
         return rideLogbook.size
     }
 
@@ -883,7 +728,6 @@ class NasugbuCentralSystem {
         var total = 0.0
 
         for (ride in rideLogbook) {
-
             total += ride.fare
         }
 
@@ -891,28 +735,30 @@ class NasugbuCentralSystem {
     }
 }
 
-
 // ==========================================
-// 10. MAIN FUNCTION
+// 12. MAIN FUNCTION
 // BACKEND TESTING
 // ==========================================
 
 fun main() {
 
     val system = NasugbuCentralSystem()
+    val authentication = AdminAuthentication()
 
     println("================================")
     println(" NASUGBU CENTRAL DISPATCH SYSTEM")
     println("================================")
 
-    // CHECK BARANGAYS
+    println("\n--- ADMIN LOGIN TEST ---")
 
-    println(
-        "\nTotal Barangays: ${system.getTotalBarangays()}"
+    val login = authentication.authenticate(
+        "admin",
+        "admin123"
     )
 
-    // POLYMORPHISM TEST
-    // PERSON REFERENCE, DRIVER OBJECT
+    println("Admin Login Successful: $login")
+
+    println("\nTotal Barangays: ${system.getTotalBarangays()}")
 
     val person: Person = Driver(
         "Sample Driver",
@@ -922,15 +768,11 @@ fun main() {
     println("\n--- PERSON INFORMATION ---")
     println(person.getPersonInformation())
 
-    // CONFIGURE ZONE B FARE FOR TESTING
-
     system.setZoneFare(
         "Wawa",
         "B",
         25.00
     )
-
-    // DRIVER TIME-IN
 
     println("\n--- DRIVER TIME-IN ---")
 
@@ -956,16 +798,11 @@ fun main() {
 
     println(timeIn2.message)
 
-    // CHECK QUEUE
-
     println("\n--- ZONE C QUEUE ---")
 
     for (tricycle in system.getZoneQueue("Wawa", "C")) {
-
         println(tricycle.getInformation())
     }
-
-    // PASSENGER PAYMENT AND DISPATCH
 
     println("\n--- DISPATCH NEXT ---")
 
@@ -978,40 +815,24 @@ fun main() {
 
     println(result.message)
 
-    if (result.successful) {
+    if (result.successful && result.ride != null) {
 
         val ride = result.ride
 
-        if (ride != null) {
+        println("\n${ride.generateTicket()}")
 
-            println("\n" + ride.generateTicket())
+        println("\n--- COMPLETE RIDE ---")
 
-            // COMPLETE RIDE
+        val completion = system.completeRide(ride.rideId)
 
-            println("\n--- COMPLETE RIDE ---")
-
-            val completion =
-                system.completeRide(ride.rideId)
-
-            println(completion.message)
-        }
+        println(completion.message)
     }
-
-    // LOGBOOK SUMMARY
 
     println("\n--- LOGBOOK SUMMARY ---")
 
-    println(
-        "Total Trips: ${system.getTotalTrips()}"
-    )
-
-    println(
-        "Ongoing Trips: ${system.getOngoingRides().size}"
-    )
-
-    println(
-        "Completed Trips: ${system.getCompletedRides().size}"
-    )
+    println("Total Trips: ${system.getTotalTrips()}")
+    println("Ongoing Trips: ${system.getOngoingRides().size}")
+    println("Completed Trips: ${system.getCompletedRides().size}")
 
     println(
         "Total Collections: PHP ${system.getTotalCollections()}"
