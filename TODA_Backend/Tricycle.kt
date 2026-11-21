@@ -1,4 +1,4 @@
-package com.example.tricycledispatchandzoneapp
+package backend
 
 class Tricycle(
     val bodyNumber: String,
