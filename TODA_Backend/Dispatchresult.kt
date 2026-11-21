@@ -1,4 +1,6 @@
-package com.example.tricycledispatchandzoneapp
+package backend
+
+import com.example.tricycledispatchandzoneapp.backend.Ride
 
 class DispatchResult(
     val successful: Boolean,
