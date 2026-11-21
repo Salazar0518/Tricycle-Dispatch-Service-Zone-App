@@ -1,4 +1,4 @@
-package com.example.todaapp
+package com.example.tricycledispatchandzoneapp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -26,17 +26,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog                    // NEW: enlarged map
+import androidx.compose.ui.window.DialogProperties          // NEW: full-screen dialog
+import androidx.compose.foundation.gestures.detectTransformGestures // NEW: pinch zoom
+import androidx.compose.foundation.gestures.detectTapGestures       // NEW: double tap
+import androidx.compose.ui.input.pointer.pointerInput       // NEW
+import androidx.compose.ui.graphics.graphicsLayer           // NEW
+import androidx.compose.ui.draw.clipToBounds                // NEW
+import androidx.compose.ui.layout.onSizeChanged             // NEW
+import androidx.compose.ui.unit.IntSize                     // NEW
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 
-import com.example.todaapp.data.TODADatabase
-import com.example.todaapp.data.DriverEntity
+import com.example.tricycledispatchandzoneapp.data.TODADatabase
+import com.example.tricycledispatchandzoneapp.data.DriverEntity
 
 import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.example.todaapp.worker.DriverSyncWorker
+import com.example.tricycledispatchandzoneapp.worker.DriverSyncWorker
 
 // ==========================================
 // APP COLORS
@@ -149,35 +158,31 @@ fun AdminApp() {
 
             val savedDrivers = driverDao.getAllDrivers().first()
 
-            for (driver in savedDrivers) {
+            for ((driverId1, name, barangay, bodyNumber1, zoneCode, capacity, available) in savedDrivers) {
 
                 // Ignore old records without tricycle information.
                 if (
-                    driver.bodyNumber.isBlank() ||
-                    driver.zoneCode.isBlank()
+                    bodyNumber1.isBlank() ||
+                    zoneCode.isBlank()
                 ) {
                     continue
                 }
 
                 // Only restore available drivers.
-                if (!driver.available) {
+                if (!available) {
                     continue
                 }
 
-                val savedDriverId = driver.driverId.toIntOrNull()
-
-                if (savedDriverId == null) {
-                    continue
-                }
+                val savedDriverId = driverId1.toIntOrNull() ?: continue
 
                 // Return the tricycle to its original queue.
                 centralSystem.timeInTricycle(
-                    barangayName = driver.barangay,
-                    zoneCode = driver.zoneCode,
-                    bodyNumber = driver.bodyNumber,
-                    driverName = driver.name,
+                    barangayName = barangay,
+                    zoneCode = zoneCode,
+                    bodyNumber = bodyNumber1,
+                    driverName = name,
                     driverId = savedDriverId,
-                    passengerCapacity = driver.capacity
+                    passengerCapacity = capacity
                 )
             }
 
@@ -804,6 +809,9 @@ fun AdminApp() {
                             description = "Barangay: $selectedBarangay\nTerminal: $selectedBarangay TODA Terminal\nService Zones: 3"
                         )
 
+                        // ===== NEW: MAP ON TERMINAL SCREEN =====
+                        ZoneMapCard()
+
                         Text(
                             "SERVICE ZONES",
                             color = Gray,
@@ -1005,6 +1013,9 @@ fun AdminApp() {
                         )
 
                         FormLabel("SERVICE ZONE")
+
+                        // ===== NEW: MAP ON TIME-IN SCREEN =====
+                        ZoneMapCard()
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1374,6 +1385,9 @@ fun AdminApp() {
                         )
 
                         FormLabel("DESTINATION / SERVICE ZONE")
+
+                        // ===== NEW: MAP ON DISPATCH SCREEN (MAIN SPOT) =====
+                        ZoneMapCard()
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1925,6 +1939,247 @@ fun AppHeader(subtitle: String) {
                 fontSize = 10.sp,
                 letterSpacing = 1.sp
             )
+        }
+    }
+}
+
+// ==========================================
+// NEW: REUSABLE ZONE MAP CARD
+// Small preview on the screen. Tap to open the
+// full-screen zoomable map.
+// Requires: res/drawable/nasugbu_map.png
+// ==========================================
+
+@Composable
+fun ZoneMapCard() {
+
+    var enlarged by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { enlarged = true },
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+
+            Text(
+                "NASUGBU SERVICE AREA MAP",
+                color = Teal,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                letterSpacing = 1.sp
+            )
+
+            Image(
+                painter = painterResource(
+                    id = R.drawable.nasugbu_map
+                ),
+                contentDescription = "Map of Nasugbu",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
+
+            Text(
+                "Tap the map to enlarge and zoom",
+                color = Gray,
+                fontSize = 11.sp
+            )
+        }
+    }
+
+    if (enlarged) {
+        ZoomableMapDialog(
+            onDismiss = { enlarged = false }
+        )
+    }
+}
+
+// ==========================================
+// NEW: FULL-SCREEN ZOOMABLE MAP
+// - Pinch with two fingers to zoom in / out
+// - Drag with one finger to move the map
+// - Double-tap to zoom in, double-tap again to reset
+// - + / - / Reset buttons as an alternative
+// ==========================================
+
+@Composable
+fun ZoomableMapDialog(onDismiss: () -> Unit) {
+
+    val minScale = 1f
+    val maxScale = 6f
+
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
+    var boxSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // Applies zoom and pan, and keeps the map inside the screen.
+    fun applyZoom(newScale: Float, panX: Float, panY: Float) {
+
+        val s = newScale.coerceIn(minScale, maxScale)
+
+        val maxX = boxSize.width * (s - 1f) / 2f
+        val maxY = boxSize.height * (s - 1f) / 2f
+
+        offsetX = (offsetX + panX).coerceIn(-maxX, maxX)
+        offsetY = (offsetY + panY).coerceIn(-maxY, maxY)
+        scale = s
+    }
+
+    fun resetZoom() {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Navy)
+        ) {
+
+            // ---------- ZOOMABLE IMAGE ----------
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clipToBounds()
+                    .onSizeChanged { boxSize = it }
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            applyZoom(scale * zoom, pan.x, pan.y)
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                if (scale > 1.1f) {
+                                    resetZoom()
+                                } else {
+                                    applyZoom(2.5f, 0f, 0f)
+                                }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.nasugbu_map
+                    ),
+                    contentDescription = "Zoomable map of Nasugbu",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            // ---------- TOP BAR ----------
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .background(Navy.copy(alpha = 0.85f))
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+
+                Column {
+                    Text(
+                        "NASUGBU MAP",
+                        color = White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        "Pinch or double-tap to zoom, drag to move",
+                        color = White.copy(alpha = 0.7f),
+                        fontSize = 11.sp
+                    )
+                }
+
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        "CLOSE",
+                        color = Amber,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // ---------- BOTTOM CONTROLS ----------
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Navy.copy(alpha = 0.85f))
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+
+                Button(
+                    onClick = { applyZoom(scale / 1.5f, 0f, 0f) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LightNavy,
+                        contentColor = Navy
+                    )
+                ) {
+                    Text("−  Zoom Out", fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = { applyZoom(scale * 1.5f, 0f, 0f) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Teal,
+                        contentColor = White
+                    )
+                ) {
+                    Text("+  Zoom In", fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = { resetZoom() },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = White
+                    )
+                ) {
+                    Text("Reset")
+                }
+            }
         }
     }
 }
