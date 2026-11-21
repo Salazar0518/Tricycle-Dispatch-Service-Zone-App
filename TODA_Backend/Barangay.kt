@@ -1,4 +1,4 @@
-package com.example.tricycledispatchandzoneapp.backend
+package backend
 
 class Barangay(
     val barangayName: String
