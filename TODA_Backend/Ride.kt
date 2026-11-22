@@ -1,4 +1,4 @@
-package backend
+package com.example.tricycledispatchandzoneapp.backend
 
 class Ride(
     val rideId: Int,
