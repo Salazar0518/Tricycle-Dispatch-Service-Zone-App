@@ -1,9 +1,9 @@
 package com.example.tricycledispatchandzoneapp
 
-import backend.AdminAuthentication
-import backend.Driver
-import backend.NasugbuCentralSystem
-import backend.Person
+import com.example.tricycledispatchandzoneapp.backend.AdminAuthentication
+import com.example.tricycledispatchandzoneapp.backend.Driver
+import com.example.tricycledispatchandzoneapp.backend.NasugbuCentralSystem
+import com.example.tricycledispatchandzoneapp.backend.Person
 
 fun main() {
 
