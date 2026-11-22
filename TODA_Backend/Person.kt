@@ -1,4 +1,4 @@
-package backend
+package com.example.tricycledispatchandzoneapp.backend
 
 abstract class Person(
     val name: String,
